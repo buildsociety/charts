@@ -1,3 +1,6 @@
 helm-extra-args: --timeout 600
 check-version-increment: true
 debug: true
+ChartDir: stable
+ValidateYaml: true
+ValidateChartSchema: true
