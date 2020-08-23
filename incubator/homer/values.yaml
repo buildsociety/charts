@@ -1,0 +1,114 @@
+# Default values for jenkins-relay.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+title:
+  text: "Homer"
+  icon: fas fa-home
+header: true
+footer: false
+message:
+  style: "is-warning"
+  title: "Optional message!"
+  content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+
+links:
+  - name: Github
+    icon: fas fa-skull-crossbones
+    url: https://github.com/bastienwirtz/homer
+    target: _self
+
+columns: auto
+connectivityCheck: false
+theme: default
+colors:
+  light:
+    highlight_primary: rgba(51,103,214,0.8)
+    highlight_secondary: rgba(66,133,244,0.8)
+    highlight_hover: rgba(90,149,245,0.8)
+    background: rgba(245, 245, 245,0.8)
+    card_background: rgba(255,255,255,0.8)
+    text: rgba(54,54,54,0.8)
+    text_header: rgba(66,66,66,0.8)
+    text_title: rgba(48,48,48,0.8)
+    text_subtitle: 	rgba(66,66,66,0.8)
+    card_shadow: rgba(0, 0, 0, 0.1)
+    link_hover: 	rgba(54,54,54,0.8)
+    #background_image: assets/your/light/bg.png
+  dark:
+    highlight_primary: \#3367d6
+    highlight_secondary: \#4285f4
+    highlight_hover: \#5a95f5
+    background: \#131313
+    card_background: \#2b2b2b
+    text: \#eaeaea
+    text_header: \#ffffff
+    text_title: \#fafafa
+    text_subtitle: \#f5f5f5
+    card_shadow: rgba(0, 0, 0, 0.4)
+    link_hover: \#ffdd57
+    #background_image: assets/your/dark/bg.png
+
+services:
+  - name: Applications
+    icon: fas fa-globe-europe
+    items:
+      - name: buildsociety
+        icon: fas fa-sitemap
+        url: https://buildsociety.cloud
+        target: _self
+
+image:
+  repository: b4bz/homer
+  tag: 20.07.2
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: homer.internal
+      paths:
+        - /
+
+  tls:
+    - secretName: homer-tls
+      hosts:
+        - homer.internal
+
+resources: {}
+  #limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  #requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
