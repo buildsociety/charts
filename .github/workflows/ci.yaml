@@ -39,12 +39,12 @@ jobs:
           - v1.17.11
           - v1.18.0
     steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-      - name: Run kubeval
-        env:
-          KUBERNETES_VERSION: ${{ matrix.k8s }}
-        run: .github/workflow-extras/kubeval.sh
+      - uses: actions/checkout@master
+      - name: Run Kubeval
+        uses: instrumenta/kubeval-action@master
+        with:
+          version: ${{ matrix.k8s }}
+          files: stable/**
 
 
   install-chart:
