@@ -44,6 +44,7 @@ jobs:
         uses: instrumenta/kubeval-action@master
         with:
           version: ${{ matrix.k8s }}
+          files: stable/**/templates/*.yaml
 
 
   install-chart:
