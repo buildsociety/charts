@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "homer.fullname" . }}-conf"
+data:
+  config.yml: |
+    title: {{ .Values.title.text }}
+    icon: {{ .Values.title.icon }}
+    header: {{ .Values.header }}
+    footer: {{ .Values.footer }}
+
+    {{- if .Values.message }}
+    message:
+        style: {{ .Values.message.style }}
+        title: {{ .Values.message.title }}
+        content: {{ .Values.message.content }}
+    {{- end }}
+
+    {{- if .Values.links }}
+    links:
+      {{- range .Values.links }}
+      - name: "{{ .name }}"
+        icon: "{{ .icon }}"
+        url: "{{ .url }}"
+        target: "{{ .target }}"
+      {{- end }}
+    {{- end }}
+
+    columns: {{ .Values.columns }}
+    connectivityCheck: {{ .Values.connectivityCheck }}
+    theme: {{ .Values.theme }}
+
+    colors:
+      light:
+        highlight-primary: {{ .Values.colors.light.highlight_primary }}
+        highlight-secondary: {{ .Values.colors.light.highlight_secondary }}
+        highlight-hover: {{ .Values.colors.light.highlight_hover }}
+        background: {{ .Values.colors.light.background }}
+        card-background: {{ .Values.colors.light.card_background }}
+        text: {{ .Values.colors.light.text }}
+        text-header: {{ .Values.colors.light.text_header }}
+        text-title: {{ .Values.colors.light.text_title }}
+        text-subtitle: {{ .Values.colors.light.text_subtitle }}
+        card-shadow: {{ .Values.colors.light.card_shadow }}
+        link-hover: {{ .Values.colors.light.link_hover }}
+        background-image: {{ .Values.colors.light.background_image }}
+      dark:
+        highlight-primary: {{ .Values.colors.dark.highlight_primary }}
+        highlight-secondary: {{ .Values.colors.dark.highlight_secondary }}
+        highlight-hover: {{ .Values.colors.dark.highlight_hover }}
+        background: {{ .Values.colors.dark.background }}
+        card-background: {{ .Values.colors.dark.card_background }}
+        text: {{ .Values.colors.dark.text }}
+        text-header: {{ .Values.colors.dark.text_header }}
+        text-title: {{ .Values.colors.dark.text_title }}
+        text-subtitle: {{ .Values.colors.dark.text_subtitle }}
+        card-shadow: {{ .Values.colors.dark.card_shadow }}
+        link-hover: {{ .Values.colors.dark.link_hover }}
+        background-image: {{ .Values.colors.dark.background_image }}
+    services:
+      {{- range .Values.services }}
+      - name: {{ .name}}
+        icon: {{ .icon }}
+        items: {{- if .items }}{{- else }}[]{{- end }}
+        {{- range .items }}
+          - name: {{ .name }}
+            icon: {{ .icon }}
+            url: {{ .url }}
+            target: {{ .target }}
+        {{- end }}
+      {{- end }}
+
+
