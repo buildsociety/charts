@@ -1,0 +1,130 @@
+# Prowlarr with Private Internet Access VPN Configuration
+# This example shows Prowlarr configured with Gluetun VPN using PIA
+
+prowlarr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+      
+    data:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9696
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Prowlarr"
+    description: "Indexer Manager (VPN)"
+    widget:
+      type: "prowlarr"
+      url: "http://prowlarr:9696"
+      # key: "your-api-key-here"
+
+# Gluetun VPN Configuration with PIA
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+
+  # VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # Set these values in your deployment:
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "UK London"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  # Resource configuration for VPN
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  # Annotations for VPN setup
+  annotations:
+    description: "Prowlarr with PIA VPN protection for indexer access"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policy (optional - for additional security)
+networkPolicy:
+  enabled: false
+  # Example rules - customize as needed
+  # ingress:
+  #   - from:
+  #     - namespaceSelector:
+  #         matchLabels:
+  #           name: media
+  #     ports:
+  #     - protocol: TCP
+  #       port: 9696

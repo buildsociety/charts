@@ -1,0 +1,107 @@
+# Default values for cloudflareddns.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/hotio/cloudflareddns
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Cloudflare DDNS Configuration
+cloudflareddns:
+  # Environment variables
+  env:
+    PUID: "1000"
+    PGID: "1000"
+    UMASK: "002"
+    TZ: "Etc/UTC"
+    # Update interval in seconds
+    INTERVAL: "300"
+    # Detection mode for public IP
+    # Options: dig-google.com, dig-opendns.com, dig-whoami.cloudflare, curl-icanhazip.com, curl-wtfismyip.com, curl-ipecho.net, curl-ifconfig.me
+    DETECTION_MODE: "dig-whoami.cloudflare"
+    # Log level (0-5, where 0 is least verbose)
+    LOG_LEVEL: "3"
+    
+  # Cloudflare credentials (stored in secret)
+  # Either use email + global API key OR API token
+  credentials:
+    # Option 1: Email + Global API Key
+    email: ""  # your.cf.email@example.com
+    apiKey: ""  # your.global.apikey
+    
+    # Option 2: API Token (recommended)
+    apiToken: ""  # your.api.token
+    # Zone-specific API token (optional)
+    apiTokenZone: ""
+    
+    # Use existing secret instead of creating one
+    existingSecret: ""
+    # Keys in existing secret
+    existingSecretKeys:
+      email: "cf-email"
+      apiKey: "cf-apikey"
+      apiToken: "cf-apitoken"
+      apiTokenZone: "cf-apitoken-zone"
+  
+  # DNS records to update
+  # Format: semicolon-separated list
+  hosts: ""  # "test.example.com;test.foobar.com;test2.foobar.com"
+  zones: ""  # "example.com;foobar.com;foobar.com"
+  recordTypes: ""  # "A;A;AAAA"
+  
+  # Additional environment variables
+  extraEnvVars: []
+  # - name: CUSTOM_VAR
+  #   value: "custom-value"
+
+# Persistence
+persistence:
+  enabled: true
+  # storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /config
+  # existingClaim: ""
+
+# Pod configuration
+pod:
+  annotations: {}
+  securityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+    - ALL
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

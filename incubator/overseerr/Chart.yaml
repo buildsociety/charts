@@ -1,0 +1,22 @@
+apiVersion: v2
+name: overseerr
+description: A Helm chart for Overseerr - Request management and media discovery tool for Plex
+type: application
+version: 0.1.0
+appVersion: "1.33.2"
+keywords:
+  - overseerr
+  - media
+  - requests
+  - plex
+  - discovery
+  - management
+  - automation
+home: https://overseerr.dev/
+sources:
+  - https://github.com/sctx/overseerr
+  - https://github.com/linuxserver/docker-overseerr
+icon: https://raw.githubusercontent.com/sctx/overseerr/develop/public/logo_full.svg
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

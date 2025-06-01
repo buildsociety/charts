@@ -1,0 +1,64 @@
+{{/*
+Shared Storage template for Media Centre
+Creates PersistentVolumeClaim and PersistentVolume resources for shared media storage,
+providing centralized storage that can be mounted by multiple media applications.
+*/}}
+{{- if and .Values.global.media.enabled (not .Values.global.media.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "media-centre.fullname" . }}-media
+  labels:
+    {{- include "media-centre.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shared-storage
+spec:
+  accessModes:
+    - {{ .Values.global.media.accessMode | default "ReadWriteMany" }}
+  resources:
+    requests:
+      storage: {{ .Values.global.media.size }}
+  {{- if .Values.global.media.storageClass }}
+  {{- if (eq "-" .Values.global.media.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.media.storageClass }}
+  {{- end }}
+  {{- else if .Values.global.storageClass }}
+  {{- if (eq "-" .Values.global.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.global.downloads.enabled (not .Values.global.downloads.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "media-centre.fullname" . }}-downloads
+  labels:
+    {{- include "media-centre.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shared-storage
+spec:
+  accessModes:
+    - {{ .Values.global.downloads.accessMode | default "ReadWriteMany" }}
+  resources:
+    requests:
+      storage: {{ .Values.global.downloads.size }}
+  {{- if .Values.global.downloads.storageClass }}
+  {{- if (eq "-" .Values.global.downloads.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.downloads.storageClass }}
+  {{- end }}
+  {{- else if .Values.global.storageClass }}
+  {{- if (eq "-" .Values.global.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass }}
+  {{- end }}
+  {{- end }}
+{{- end }}

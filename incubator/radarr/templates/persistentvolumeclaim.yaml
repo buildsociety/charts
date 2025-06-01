@@ -1,0 +1,64 @@
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.radarr.persistence }}
+{{- if include "radarr.shouldCreateNFSPV" (dict "volumeName" $volumeName "context" $) }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "radarr.pvName" (dict "volumeName" $volumeName "context" $) }}
+  labels:
+    {{- include "radarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
+spec:
+  capacity:
+    storage: {{ $volume.size }}
+  accessModes:
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
+{{- end }}
+
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.radarr.persistence }}
+{{- if include "radarr.shouldCreatePVC" (dict "volumeName" $volumeName "context" $) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.pvcName" (dict "volumeName" $volumeName "context" $) }}
+  labels:
+    {{- include "radarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
+spec:
+  accessModes:
+    - {{ $volume.accessMode }}
+  resources:
+    requests:
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "radarr.pvName" (dict "volumeName" $volumeName "context" $) }}
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
+  {{- end }}
+{{- end }}
+{{- end }}
+

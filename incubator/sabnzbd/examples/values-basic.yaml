@@ -1,0 +1,86 @@
+# Basic SABnzbd Configuration
+# This example shows a simple SABnzbd setup without VPN
+
+sabnzbd:
+  # Basic environment configuration
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Storage configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+    
+    downloads:
+      enabled: true
+      size: 1Ti
+      storageClass: ""
+    
+    incomplete:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+    
+    # Optional media volumes for *arr integration
+    tv:
+      enabled: true
+      size: 500Gi
+      storageClass: ""
+    
+    anime:
+      enabled: false
+      size: 200Gi
+    
+    data:
+      enabled: true
+      size: 100Gi
+      storageClass: ""
+
+  # Resource limits
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "SABnzbd"
+    description: "Usenet Download Client"
+
+# VPN disabled for basic setup
+gluetun:
+  enabled: false
+
+# Basic ingress configuration (disabled by default)
+sabnzbd:
+  ingress:
+    enabled: false
+    # Uncomment and configure if you need external access
+    # className: "nginx"
+    # hosts:
+    #   - host: sabnzbd.local
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policies disabled for simplicity
+networkPolicy:
+  enabled: false

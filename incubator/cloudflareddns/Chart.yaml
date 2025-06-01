@@ -1,0 +1,17 @@
+apiVersion: v2
+name: cloudflareddns
+description: A Helm chart for Cloudflare Dynamic DNS updater
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - cloudflare
+  - ddns
+  - dns
+  - dynamic-dns
+home: https://github.com/hotio/cloudflareddns
+sources:
+  - https://github.com/hotio/cloudflareddns
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

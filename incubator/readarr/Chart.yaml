@@ -1,0 +1,22 @@
+apiVersion: v2
+name: readarr
+description: A Helm chart for Readarr - Book Manager and Automation (Ebook/Audiobook)
+type: application
+version: 0.1.0
+appVersion: "0.3.18"
+keywords:
+  - readarr
+  - books
+  - ebooks
+  - audiobooks
+  - media
+  - automation
+  - calibre
+home: https://readarr.com/
+sources:
+  - https://github.com/Readarr/Readarr
+  - https://github.com/linuxserver/docker-readarr
+icon: https://raw.githubusercontent.com/Readarr/Readarr/develop/Logo/256.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: tautulli
+description: A Helm chart for Tautulli - A Python based monitoring and tracking tool for Plex Media Server
+type: application
+version: 0.1.0
+appVersion: "2.13.4"
+keywords:
+  - tautulli
+  - plex
+  - monitoring
+  - statistics
+  - media
+  - analytics
+home: https://tautulli.com/
+sources:
+  - https://github.com/Tautulli/Tautulli
+  - https://github.com/linuxserver/docker-tautulli
+icon: https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

@@ -1,0 +1,20 @@
+{{/*
+Service template for Tautulli
+Creates a Kubernetes Service resource that exposes the Tautulli application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tautulli.fullname" . }}
+  labels:
+    {{- include "tautulli.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.tautulli.service.type }}
+  ports:
+    - port: {{ .Values.tautulli.service.port }}
+      targetPort: {{ .Values.tautulli.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tautulli.selectorLabels" . | nindent 4 }}

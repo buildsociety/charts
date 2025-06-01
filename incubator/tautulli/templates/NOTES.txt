@@ -1,0 +1,111 @@
+1. Get the application URL by running these commands:
+{{- if .Values.tautulli.ingress.enabled }}
+{{- range $host := .Values.tautulli.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.tautulli.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.tautulli.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "tautulli.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.tautulli.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "tautulli.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "tautulli.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.tautulli.service.port }}
+{{- else if contains "ClusterIP" .Values.tautulli.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{- include "tautulli.selectorLabels" . | nindent 4 }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Configuration:
+   - First time setup requires configuring Plex Media Server connection
+   - Web interface port: {{ .Values.tautulli.service.port }}
+   - Default login: No authentication required initially
+   
+3. Plex Server Integration:
+{{- if .Values.tautulli.plex.url }}
+   - Plex server URL is pre-configured: {{ .Values.tautulli.plex.url }}
+{{- else }}
+   - Configure Plex server URL in Settings > Plex Media Server
+   - Recommended internal URL: http://plex:32400
+{{- end }}
+{{- if .Values.tautulli.plex.token }}
+   - Plex token is pre-configured via secret
+{{- else }}
+   - Obtain Plex token from: Settings > Plex Media Server > Show Advanced
+   - Or visit: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
+{{- end }}
+   
+   To test Plex connection:
+   - Go to Settings > Plex Media Server
+   - Click "Test Connection" after entering URL and token
+
+4. Storage:
+{{- if .Values.tautulli.persistence.config.enabled }}
+   - Config: {{ .Values.tautulli.persistence.config.size }} ({{ .Values.tautulli.persistence.config.mountPath }})
+{{- end }}
+{{- if .Values.tautulli.persistence.logs.enabled }}
+   - Logs: {{ .Values.tautulli.persistence.logs.size }} ({{ .Values.tautulli.persistence.logs.mountPath }})
+{{- end }}
+
+5. Security:
+   - Running as UID/GID: {{ .Values.tautulli.env.PUID }}/{{ .Values.tautulli.env.PGID }}
+   - Timezone: {{ .Values.tautulli.env.TZ }}
+   - Consider enabling authentication in Settings > Web Interface
+   
+6. Troubleshooting:
+   
+   View logs:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c tautulli
+   
+   Get shell access:
+   kubectl --namespace {{ .Release.Namespace }} exec -it $POD_NAME -c tautulli -- /bin/bash
+   
+   Check pod status:
+   kubectl --namespace {{ .Release.Namespace }} describe pod $POD_NAME
+
+{{- if .Values.tautulli.homepage.enabled }}
+
+7. Homepage Integration:
+   - Labels configured for homepage dashboard integration
+   - Group: {{ .Values.tautulli.homepage.group }}
+   - Widget type: {{ .Values.tautulli.homepage.widget.type }}
+{{- if .Values.tautulli.homepage.widget.key }}
+   - API key configured for widget
+{{- else }}
+   - Remember to set homepage.widget.key in values.yaml for full widget functionality
+   - Get API key from Settings > Web Interface > API
+{{- end }}
+
+{{- end }}
+
+8. Common Configuration Tasks:
+   
+   Enable notifications:
+   - Go to Settings > Notification Agents
+   - Add Discord, Slack, email, or other notification services
+   
+   Setup user monitoring:
+   - Go to Settings > Users
+   - Configure per-user monitoring and restrictions
+   
+   Configure data retention:
+   - Go to Settings > General
+   - Set history cleanup and backup schedules
+   
+   Create custom graphs:
+   - Go to Graphs
+   - Create custom charts for viewing patterns
+
+9. API Access:
+   - API documentation: http://tautulli-url:8181/api/v2
+   - Generate API key: Settings > Web Interface > API
+   - Test API: curl "http://tautulli-url:8181/api/v2?apikey=YOUR_API_KEY&cmd=get_activity"
+
+For more information, visit:
+- Tautulli documentation: https://github.com/Tautulli/Tautulli/wiki
+- Chart repository: https://github.com/your-repo/charts

@@ -1,0 +1,271 @@
+{{/*
+Deployment template for Gluetun
+Creates a Kubernetes Deployment resource that manages the Gluetun VPN client pods,
+including container configuration, environment variables, volume mounts, and resource limits.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gluetun.fullname" . }}
+  labels:
+    {{- include "gluetun.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gluetun.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.gluetun.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.gluetun.homepage.enabled }}
+        homepage.group: {{ .Values.gluetun.homepage.group | quote }}
+        homepage.name: {{ .Values.gluetun.homepage.name | quote }}
+        homepage.description: {{ .Values.gluetun.homepage.description | quote }}
+        homepage.href: http://{{ include "gluetun.fullname" . }}:{{ .Values.gluetun.service.internal.ports.control.port }}
+        homepage.widget.type: {{ .Values.gluetun.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.gluetun.homepage.widget.url | quote }}
+        {{- end }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "gluetun.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "gluetun.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+
+      containers:
+        - name: gluetun
+          image: "{{ .Values.gluetun.image.repository }}:{{ .Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.gluetun.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.gluetun.securityContext | nindent 12 }}
+          
+          ports:
+            - name: http-proxy
+              containerPort: {{ .Values.gluetun.service.internal.ports.httpProxy.targetPort }}
+              protocol: {{ .Values.gluetun.service.internal.ports.httpProxy.protocol }}
+            - name: shadowsocks-tcp
+              containerPort: {{ .Values.gluetun.service.internal.ports.shadowsocksTcp.targetPort }}
+              protocol: {{ .Values.gluetun.service.internal.ports.shadowsocksTcp.protocol }}
+            - name: shadowsocks-udp
+              containerPort: {{ .Values.gluetun.service.internal.ports.shadowsocksUdp.targetPort }}
+              protocol: {{ .Values.gluetun.service.internal.ports.shadowsocksUdp.protocol }}
+            - name: socks5
+              containerPort: {{ .Values.gluetun.service.internal.ports.socks5.targetPort }}
+              protocol: {{ .Values.gluetun.service.internal.ports.socks5.protocol }}
+            - name: control
+              containerPort: {{ .Values.gluetun.service.internal.ports.control.targetPort }}
+              protocol: {{ .Values.gluetun.service.internal.ports.control.protocol }}
+
+          env:
+            # Basic configuration
+            - name: TZ
+              value: {{ .Values.gluetun.env.TZ | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.gluetun.env.LOG_LEVEL | quote }}
+            
+            # Proxy configuration
+            - name: HTTPPROXY
+              value: {{ .Values.gluetun.env.HTTPPROXY | quote }}
+            - name: HTTPPROXY_LISTENING_ADDRESS
+              value: {{ .Values.gluetun.env.HTTPPROXY_LISTENING_ADDRESS | quote }}
+            - name: SHADOWSOCKS
+              value: {{ .Values.gluetun.env.SHADOWSOCKS | quote }}
+            - name: SHADOWSOCKS_LISTENING_ADDRESS
+              value: {{ .Values.gluetun.env.SHADOWSOCKS_LISTENING_ADDRESS | quote }}
+            - name: SOCKSPROXY
+              value: {{ .Values.gluetun.env.SOCKSPROXY | quote }}
+            - name: SOCKSPROXY_LISTENING_ADDRESS
+              value: {{ .Values.gluetun.env.SOCKSPROXY_LISTENING_ADDRESS | quote }}
+            
+            # Control server
+            - name: CONTROL_SERVER_LISTENING_ADDRESS
+              value: {{ .Values.gluetun.env.CONTROL_SERVER_LISTENING_ADDRESS | quote }}
+            
+            # Network configuration
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.gluetun.env.FIREWALL_OUTBOUND_SUBNETS | quote }}
+            - name: VPN_PORT_FORWARDING
+              value: {{ .Values.gluetun.env.VPN_PORT_FORWARDING | quote }}
+            
+            # Health and updates
+            - name: UPDATER_PERIOD
+              value: {{ .Values.gluetun.env.UPDATER_PERIOD | quote }}
+            - name: HEALTH_TARGET_ADDRESS
+              value: {{ .Values.gluetun.env.HEALTH_TARGET_ADDRESS | quote }}
+            - name: HEALTH_SUCCESS_WAIT_DURATION
+              value: {{ .Values.gluetun.env.HEALTH_SUCCESS_WAIT_DURATION | quote }}
+
+            # VPN Provider specific configuration
+            {{- if .Values.gluetun.vpn.nordvpn.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.nordvpn.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.nordvpn.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: wireguard-private-key
+            {{- if .Values.gluetun.vpn.nordvpn.serverCities }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.nordvpn.serverCities | quote }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.nordvpn.serverCountries }}
+            - name: SERVER_COUNTRIES
+              value: {{ .Values.gluetun.vpn.nordvpn.serverCountries | quote }}
+            {{- end }}
+            {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.mullvad.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.mullvad.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: wireguard-private-key
+            {{- if .Values.gluetun.vpn.mullvad.addresses }}
+            - name: WIREGUARD_ADDRESSES
+              value: {{ .Values.gluetun.vpn.mullvad.addresses | quote }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.mullvad.serverCities }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.mullvad.serverCities | quote }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.mullvad.serverCountries }}
+            - name: SERVER_COUNTRIES
+              value: {{ .Values.gluetun.vpn.mullvad.serverCountries | quote }}
+            {{- end }}
+            {{- else if .Values.gluetun.vpn.pia.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.pia.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-password
+            - name: SERVER_REGIONS
+              value: {{ .Values.gluetun.vpn.pia.serverRegions | quote }}
+            {{- else if .Values.gluetun.vpn.expressvpn.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.expressvpn.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-password
+            {{- if .Values.gluetun.vpn.expressvpn.serverNames }}
+            - name: SERVER_NAMES
+              value: {{ .Values.gluetun.vpn.expressvpn.serverNames | quote }}
+            {{- end }}
+            {{- else if .Values.gluetun.vpn.surfshark.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.surfshark.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gluetun.fullname" . }}-vpn
+                  key: openvpn-password
+            {{- if .Values.gluetun.vpn.surfshark.serverRegions }}
+            - name: SERVER_REGIONS
+              value: {{ .Values.gluetun.vpn.surfshark.serverRegions | quote }}
+            {{- end }}
+            {{- else if .Values.gluetun.vpn.custom.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.custom.serviceProvider | quote }}
+            - name: OPENVPN_CONFIG_FILE
+              value: "/gluetun/custom.conf"
+            {{- end }}
+
+          volumeMounts:
+            {{- if .Values.gluetun.persistence.enabled }}
+            - name: gluetun-data
+              mountPath: {{ .Values.gluetun.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.custom.enabled }}
+            - name: custom-config
+              mountPath: /gluetun/custom.conf
+              subPath: custom.conf
+              readOnly: true
+            {{- end }}
+
+          {{- if .Values.gluetun.healthCheck.enabled }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "wget -q --timeout=5 --tries=1 --spider http://localhost:{{ .Values.gluetun.service.internal.ports.control.targetPort }}/v1/openvpn/status || exit 1"
+            initialDelaySeconds: {{ .Values.gluetun.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.gluetun.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.gluetun.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.gluetun.healthCheck.failureThreshold }}
+            successThreshold: {{ .Values.gluetun.healthCheck.successThreshold }}
+          
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "wget -q --timeout=5 --tries=1 --spider http://localhost:{{ .Values.gluetun.service.internal.ports.control.targetPort }}/v1/publicip/ip || exit 1"
+            initialDelaySeconds: {{ div .Values.gluetun.healthCheck.initialDelaySeconds 2 }}
+            periodSeconds: {{ .Values.gluetun.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.gluetun.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.gluetun.healthCheck.failureThreshold }}
+            successThreshold: {{ .Values.gluetun.healthCheck.successThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.gluetun.resources | nindent 12 }}
+
+      volumes:
+        {{- if .Values.gluetun.persistence.enabled }}
+        - name: gluetun-data
+          persistentVolumeClaim:
+            claimName: {{ include "gluetun.fullname" . }}-data
+        {{- end }}
+        {{- if .Values.gluetun.vpn.custom.enabled }}
+        - name: custom-config
+          configMap:
+            name: {{ include "gluetun.fullname" . }}-custom-config
+        {{- end }}
+
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

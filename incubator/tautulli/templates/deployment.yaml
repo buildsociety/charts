@@ -1,0 +1,128 @@
+{{/*
+Deployment template for Tautulli
+Creates a Kubernetes Deployment resource that manages the Tautulli application pods,
+including container configuration, environment variables, volume mounts, and resource limits.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tautulli.fullname" . }}
+  labels:
+    {{- include "tautulli.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "tautulli.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.tautulli.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.tautulli.homepage.enabled }}
+        homepage.group: {{ .Values.tautulli.homepage.group | quote }}
+        homepage.name: {{ .Values.tautulli.homepage.name | quote }}
+        homepage.description: {{ .Values.tautulli.homepage.description | quote }}
+        homepage.href: http://{{ include "tautulli.fullname" . }}:{{ .Values.tautulli.service.port }}
+        homepage.widget.type: {{ .Values.tautulli.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.tautulli.homepage.widget.url | quote }}
+        {{- if .Values.tautulli.homepage.widget.key }}
+        homepage.widget.key: {{ .Values.tautulli.homepage.widget.key | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "tautulli.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "tautulli.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+      containers:
+        - name: tautulli
+          image: "{{ .Values.tautulli.image.repository }}:{{ .Values.tautulli.image.tag }}"
+          imagePullPolicy: {{ .Values.tautulli.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.tautulli.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: PUID
+              value: {{ .Values.tautulli.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.tautulli.env.PGID | quote }}
+            - name: TZ
+              value: {{ .Values.tautulli.env.TZ | quote }}
+            {{- if .Values.tautulli.plex.url }}
+            - name: PLEX_URL
+              value: {{ .Values.tautulli.plex.url | quote }}
+            {{- end }}
+            {{- if .Values.tautulli.plex.token }}
+            - name: PLEX_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tautulli.fullname" . }}-plex
+                  key: token
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.tautulli.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.tautulli.persistence.config.mountPath }}
+            {{- end }}
+            {{- if .Values.tautulli.persistence.logs.enabled }}
+            - name: logs
+              mountPath: {{ .Values.tautulli.persistence.logs.mountPath }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.tautulli.service.targetPort }}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.tautulli.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.tautulli.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.tautulli.securityContext | nindent 12 }}
+        
+      volumes:
+        {{- if .Values.tautulli.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "tautulli.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.tautulli.persistence.logs.enabled }}
+        - name: logs
+          persistentVolumeClaim:
+            claimName: {{ include "tautulli.fullname" . }}-logs
+        {{- end }}
+      
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

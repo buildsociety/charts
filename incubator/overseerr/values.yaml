@@ -1,0 +1,235 @@
+# Default values for overseerr
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # -- Set the global timezone
+  timezone: "Europe/London"
+
+# Overseerr configuration
+overseerr:
+  # -- Enable or disable Overseerr
+  enabled: true
+  
+  image:
+    # -- Overseerr image repository
+    repository: sctx/overseerr
+    # -- Overseerr image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Environment variables for Overseerr
+  env:
+    # -- Process User ID
+    PUID: 1000
+    # -- Process Group ID  
+    PGID: 1000
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Umask setting
+    UMASK_SET: "022"
+    # -- Log level (debug, info, warn, error)
+    LOG_LEVEL: "info"
+    # -- Port for Overseerr to listen on
+    PORT: "5055"
+
+  # Service configuration
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- Service port
+    port: 5055
+    # -- Target port on the pod
+    targetPort: 5055
+
+  # Ingress configuration
+  ingress:
+    # -- Enable ingress
+    enabled: false
+    # -- Ingress class name
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # -- Ingress hosts configuration
+    hosts:
+      - host: overseerr.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- TLS configuration
+    tls: []
+
+  # Persistence configuration
+  persistence:
+    # Configuration persistence
+    config:
+      # -- Enable config persistence
+      enabled: true
+      # -- Storage class for config volume
+      storageClass: ""
+      # -- Access mode for config volume
+      accessMode: ReadWriteOnce
+      # -- Size of config volume
+      size: 2Gi
+      # -- Mount path for config
+      mountPath: /app/config
+
+    # Logs persistence (optional)
+    logs:
+      # -- Enable logs persistence
+      enabled: false
+      # -- Storage class for logs volume
+      storageClass: ""
+      # -- Access mode for logs volume
+      accessMode: ReadWriteOnce
+      # -- Size of logs volume
+      size: 1Gi
+      # -- Mount path for logs
+      mountPath: /app/logs
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  # ConfigMap for additional configuration
+  configMap:
+    # -- Enable configMap creation
+    enabled: false
+    # -- Additional configuration data
+    data: {}
+    # -- Custom scripts
+    scripts: {}
+
+  # Overseerr specific settings
+  settings:
+    # -- Base URL for Overseerr (useful for reverse proxy setups)
+    baseUrl: ""
+    # -- Trust proxy headers
+    trustProxy: false
+    # -- API rate limiting
+    apiRateLimit: true
+    # -- Maximum API requests per window
+    apiRateLimitMax: 100
+    # -- API rate limit window in minutes
+    apiRateLimitWindow: 15
+
+  # Homepage integration labels
+  homepage:
+    # -- Enable homepage integration
+    enabled: true
+    # -- Homepage group
+    group: "Media"
+    # -- Homepage name
+    name: "Overseerr"
+    # -- Homepage description
+    description: "Request Manager"
+    # -- Homepage widget type
+    widget:
+      type: "overseerr"
+      # -- Internal URL for widget API calls
+      url: "http://overseerr:5055"
+      # -- API key for widget (set this in your deployment)
+      key: ""
+
+# Pod-level configuration  
+pod:
+  # -- Pod restart policy
+  restartPolicy: Always
+  # -- Pod security context
+  securityContext:
+    fsGroup: 1000
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  annotations: {}
+  # -- Pod labels
+  labels: {}
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# Network policies
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules
+  ingress: []
+  # -- Egress rules  
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+  # -- Maximum number of pods that can be unavailable
+  maxUnavailable: ""
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  # -- Enable ServiceMonitor for Prometheus
+  enabled: false
+  # -- ServiceMonitor labels
+  labels: {}
+  # -- ServiceMonitor annotations
+  annotations: {}
+  # -- Scrape interval
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Metrics path
+  path: "/api/v1/status"
+  # -- Additional scrape parameters
+  params: {}
+  # -- Basic auth configuration
+  basicAuth: {}
+  # -- Bearer token secret
+  bearerTokenSecret: {}
+  # -- TLS configuration
+  tlsConfig: {}
+  # -- Relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs
+  metricRelabelings: []
+  # -- Namespace selector
+  namespaceSelector: {}
+  # -- Target labels
+  targetLabels: []
+
+# Horizontal Pod Autoscaler
+hpa:
+  # -- Enable HPA
+  enabled: false
+  # -- Minimum number of pods
+  minReplicas: 1
+  # -- Maximum number of pods
+  maxReplicas: 3
+  # -- Target CPU utilization percentage
+  targetCPUUtilizationPercentage: 80
+  # -- Target memory utilization percentage
+  targetMemoryUtilizationPercentage: 80

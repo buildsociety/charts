@@ -1,0 +1,114 @@
+{{/*
+Service template for Gluetun
+Creates Kubernetes Service resources that expose the Gluetun VPN client pods,
+defining network access and load balancing for internal and external connections.
+*/}}
+{{- if .Values.gluetun.service.internal.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gluetun.fullname" . }}
+  labels:
+    {{- include "gluetun.labels" . | nindent 4 }}
+    service-type: "internal"
+    {{- with .Values.gluetun.service.internal.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.gluetun.service.internal.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.gluetun.service.internal.type }}
+  ports:
+    - port: {{ .Values.gluetun.service.internal.ports.httpProxy.port }}
+      targetPort: {{ .Values.gluetun.service.internal.ports.httpProxy.targetPort }}
+      protocol: {{ .Values.gluetun.service.internal.ports.httpProxy.protocol }}
+      name: http-proxy
+    - port: {{ .Values.gluetun.service.internal.ports.shadowsocksTcp.port }}
+      targetPort: {{ .Values.gluetun.service.internal.ports.shadowsocksTcp.targetPort }}
+      protocol: {{ .Values.gluetun.service.internal.ports.shadowsocksTcp.protocol }}
+      name: shadowsocks-tcp
+    - port: {{ .Values.gluetun.service.internal.ports.shadowsocksUdp.port }}
+      targetPort: {{ .Values.gluetun.service.internal.ports.shadowsocksUdp.targetPort }}
+      protocol: {{ .Values.gluetun.service.internal.ports.shadowsocksUdp.protocol }}
+      name: shadowsocks-udp
+    - port: {{ .Values.gluetun.service.internal.ports.socks5.port }}
+      targetPort: {{ .Values.gluetun.service.internal.ports.socks5.targetPort }}
+      protocol: {{ .Values.gluetun.service.internal.ports.socks5.protocol }}
+      name: socks5
+    - port: {{ .Values.gluetun.service.internal.ports.control.port }}
+      targetPort: {{ .Values.gluetun.service.internal.ports.control.targetPort }}
+      protocol: {{ .Values.gluetun.service.internal.ports.control.protocol }}
+      name: control
+  selector:
+    {{- include "gluetun.selectorLabels" . | nindent 4 }}
+{{- end }}
+
+{{- if .Values.gluetun.service.external.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gluetun.fullname" . }}-external
+  labels:
+    {{- include "gluetun.labels" . | nindent 4 }}
+    service-type: "external"
+    {{- with .Values.gluetun.service.external.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.gluetun.service.external.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.gluetun.service.external.type }}
+  {{- if and (eq .Values.gluetun.service.external.type "LoadBalancer") .Values.gluetun.service.external.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.gluetun.service.external.loadBalancerIP }}
+  {{- end }}
+  {{- if .Values.gluetun.service.external.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range .Values.gluetun.service.external.loadBalancerSourceRanges }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.gluetun.service.external.ports.httpProxy.port }}
+      targetPort: {{ .Values.gluetun.service.external.ports.httpProxy.targetPort }}
+      protocol: {{ .Values.gluetun.service.external.ports.httpProxy.protocol }}
+      name: http-proxy
+      {{- if and (eq .Values.gluetun.service.external.type "NodePort") .Values.gluetun.service.external.ports.httpProxy.nodePort }}
+      nodePort: {{ .Values.gluetun.service.external.ports.httpProxy.nodePort }}
+      {{- end }}
+    - port: {{ .Values.gluetun.service.external.ports.shadowsocksTcp.port }}
+      targetPort: {{ .Values.gluetun.service.external.ports.shadowsocksTcp.targetPort }}
+      protocol: {{ .Values.gluetun.service.external.ports.shadowsocksTcp.protocol }}
+      name: shadowsocks-tcp
+      {{- if and (eq .Values.gluetun.service.external.type "NodePort") .Values.gluetun.service.external.ports.shadowsocksTcp.nodePort }}
+      nodePort: {{ .Values.gluetun.service.external.ports.shadowsocksTcp.nodePort }}
+      {{- end }}
+    - port: {{ .Values.gluetun.service.external.ports.shadowsocksUdp.port }}
+      targetPort: {{ .Values.gluetun.service.external.ports.shadowsocksUdp.targetPort }}
+      protocol: {{ .Values.gluetun.service.external.ports.shadowsocksUdp.protocol }}
+      name: shadowsocks-udp
+      {{- if and (eq .Values.gluetun.service.external.type "NodePort") .Values.gluetun.service.external.ports.shadowsocksUdp.nodePort }}
+      nodePort: {{ .Values.gluetun.service.external.ports.shadowsocksUdp.nodePort }}
+      {{- end }}
+    - port: {{ .Values.gluetun.service.external.ports.socks5.port }}
+      targetPort: {{ .Values.gluetun.service.external.ports.socks5.targetPort }}
+      protocol: {{ .Values.gluetun.service.external.ports.socks5.protocol }}
+      name: socks5
+      {{- if and (eq .Values.gluetun.service.external.type "NodePort") .Values.gluetun.service.external.ports.socks5.nodePort }}
+      nodePort: {{ .Values.gluetun.service.external.ports.socks5.nodePort }}
+      {{- end }}
+    - port: {{ .Values.gluetun.service.external.ports.control.port }}
+      targetPort: {{ .Values.gluetun.service.external.ports.control.targetPort }}
+      protocol: {{ .Values.gluetun.service.external.ports.control.protocol }}
+      name: control
+      {{- if and (eq .Values.gluetun.service.external.type "NodePort") .Values.gluetun.service.external.ports.control.nodePort }}
+      nodePort: {{ .Values.gluetun.service.external.ports.control.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "gluetun.selectorLabels" . | nindent 4 }}
+{{- end }}

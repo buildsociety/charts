@@ -1,0 +1,44 @@
+{{/*
+PersistentVolumeClaim template for Tautulli
+Creates Kubernetes PersistentVolumeClaim resources for data persistence,
+defining storage requirements and access modes for configuration and data storage.
+*/}}
+{{- if .Values.tautulli.persistence.config.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tautulli.fullname" . }}-config
+  labels:
+    {{- include "tautulli.labels" . | nindent 4 }}
+    component: config
+spec:
+  accessModes:
+    - {{ .Values.tautulli.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.tautulli.persistence.config.size }}
+  {{- if .Values.tautulli.persistence.config.storageClass }}
+  storageClassName: {{ .Values.tautulli.persistence.config.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.tautulli.persistence.logs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tautulli.fullname" . }}-logs
+  labels:
+    {{- include "tautulli.labels" . | nindent 4 }}
+    component: logs
+spec:
+  accessModes:
+    - {{ .Values.tautulli.persistence.logs.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.tautulli.persistence.logs.size }}
+  {{- if .Values.tautulli.persistence.logs.storageClass }}
+  storageClassName: {{ .Values.tautulli.persistence.logs.storageClass }}
+  {{- end }}
+{{- end }}

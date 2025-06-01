@@ -1,0 +1,242 @@
+# Complete example values for Sonarr with VPN
+# This configuration enables Gluetun VPN with comprehensive settings
+# Copy this file and update credentials before use
+
+global:
+  timezone: "Europe/London"
+
+sonarr:
+  enabled: true
+  
+  image:
+    repository: linuxserver/sonarr
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  env:
+    TZ: "Europe/London"
+    PUID: 1000
+    PGID: 1000
+    UMASK_SET: "022"
+
+  service:
+    type: ClusterIP
+    port: 8989
+    targetPort: 8989
+
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      mountPath: /config
+    downloads:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      mountPath: /downloads
+    tv:
+      enabled: true
+      size: 2Ti
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      mountPath: /tv
+    anime:
+      enabled: true
+      size: 1Ti
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      mountPath: /anime
+    data:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      mountPath: /data
+
+  # Configure ingress as needed for external access
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: sonarr.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Sonarr"
+    description: "TV Show Manager"
+    widget:
+      type: "sonarr"
+      url: "http://sonarr:8989"
+      key: "YOUR_SONARR_API_KEY_HERE"  # Replace with your actual API key
+
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  configMap:
+    enabled: true
+    data:
+      custom-config: |
+        # Add any custom configuration here
+        LogLevel=Info
+    scripts:
+      health-check.sh: |
+        #!/bin/bash
+        curl -f http://localhost:8989/api/v3/health || exit 1
+
+# Enable Gluetun VPN with PIA
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: latest
+    pullPolicy: IfNotPresent
+    
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  ports:
+    httpProxy: 8888
+    shadowsocksTcp: 8388
+    shadowsocksUdp: 8388
+    control: 8000
+
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      username: "YOUR_PIA_USERNAME"  # Replace with your PIA username
+      password: "YOUR_PIA_PASSWORD"  # Replace with your PIA password
+      serverRegions: "UK London"
+    nordvpn:
+      enabled: false
+      serviceProvider: "nordvpn"
+      type: "wireguard"
+      privateKey: ""
+    mullvad:
+      enabled: false
+      serviceProvider: "mullvad"
+      type: "wireguard"
+      privateKey: ""
+      addresses: ""
+      serverCities: "London"
+
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    mountPath: /gluetun
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+
+
+# Security and networking
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow access from homepage namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: homepage
+      ports:
+        - protocol: TCP
+          port: 8989
+    # Allow access from monitoring namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8989
+  egress:
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow HTTPS for API calls
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+# Pod-level configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+  annotations:
+    # Prometheus monitoring
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8989"
+    prometheus.io/path: "/metrics"
+    # Backup annotations
+    backup.velero.io/backup-volumes: "config"
+  labels:
+    app.type: "media"
+    app.category: "automation"
+  nodeSelector:
+    # Prefer nodes with media storage
+    # kubernetes.io/storage-type: "fast"
+  tolerations: []
+  affinity:
+    # Prefer to schedule on different nodes than other media apps
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values: ["radarr", "lidarr", "readarr"]
+          topologyKey: kubernetes.io/hostname

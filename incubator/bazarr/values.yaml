@@ -1,0 +1,511 @@
+# Default values for bazarr
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # -- Set the global timezone
+  timezone: "Europe/London"
+
+# Bazarr configuration
+bazarr:
+  # -- Enable or disable Bazarr
+  enabled: true
+  
+  image:
+    # -- Bazarr image repository
+    repository: lscr.io/linuxserver/bazarr
+    # -- Bazarr image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Environment variables for Bazarr
+  env:
+    # -- Process User ID
+    PUID: 1000
+    # -- Process Group ID  
+    PGID: 1000
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Umask setting
+    UMASK_SET: "022"
+
+  # Service configuration
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- Service port
+    port: 6767
+    # -- Target port on the pod
+    targetPort: 6767
+
+  # Ingress configuration
+  ingress:
+    # -- Enable ingress
+    enabled: false
+    # -- Ingress class name
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # -- Ingress hosts configuration
+    hosts:
+      - host: bazarr.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- TLS configuration
+    tls: []
+
+  # Persistence configuration
+  persistence:
+    # Configuration persistence
+    config:
+      # -- Enable config persistence
+      enabled: true
+      # -- Storage class for config volume
+      storageClass: ""
+      # -- Access mode for config volume
+      accessMode: ReadWriteOnce
+      # -- Size of config volume
+      size: 1Gi
+      # -- Mount path for config
+      mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+    # TV shows persistence (read-only access)
+    tv:
+      # -- Enable TV persistence
+      enabled: true
+      # -- Storage class for TV volume
+      storageClass: ""
+      # -- Access mode for TV volume
+      accessMode: ReadOnlyMany
+      # -- Size of TV volume
+      size: 500Gi
+      # -- Mount path for TV shows
+      mountPath: /tv
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for TV storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+    # Movies persistence (read-only access)
+    movies:
+      # -- Enable movies persistence
+      enabled: true
+      # -- Storage class for movies volume
+      storageClass: ""
+      # -- Access mode for movies volume
+      accessMode: ReadOnlyMany
+      # -- Size of movies volume
+      size: 2Ti
+      # -- Mount path for movies
+      mountPath: /movies
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for movies storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+    # Anime persistence (read-only access)
+    anime:
+      # -- Enable anime persistence
+      enabled: true
+      # -- Storage class for anime volume
+      storageClass: ""
+      # -- Access mode for anime volume
+      accessMode: ReadOnlyMany
+      # -- Size of anime volume
+      size: 200Gi
+      # -- Mount path for anime
+      mountPath: /anime
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for anime storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  # ConfigMap for additional configuration
+  configMap:
+    # -- Enable configMap creation
+    enabled: false
+    # -- Additional configuration data
+    data: {}
+    # -- Custom scripts
+    scripts: {}
+
+  # Homepage integration labels
+  homepage:
+    # -- Enable homepage integration
+    enabled: true
+    # -- Homepage group
+    group: "Media"
+    # -- Homepage name
+    name: "Bazarr"
+    # -- Homepage description
+    description: "Subtitle Manager"
+    # -- Homepage widget type
+    widget:
+      type: "bazarr"
+      # -- Internal URL for widget API calls
+      url: "http://bazarr:6767"
+      # -- API key for widget (set this in your deployment)
+      key: ""
+
+# Exportarr metrics exporter configuration
+exportarr:
+  # -- Enable Exportarr metrics exporter sidecar
+  enabled: false
+  
+  image:
+    # -- Exportarr image repository
+    repository: ghcr.io/onedr0p/exportarr
+    # -- Exportarr image tag
+    tag: "v2.0"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Command to run (application type)
+  command: ["bazarr"]
+
+  # -- Environment variables for Exportarr
+  env:
+    # -- Port for metrics endpoint
+    PORT: "9707"
+    # -- URL of Bazarr instance
+    URL: "http://localhost:6767"
+    # -- API key for Bazarr (should be set via secret)
+    APIKEY: ""
+
+  # Service configuration for metrics
+  service:
+    # -- Service type for metrics
+    type: ClusterIP
+    # -- Service port for metrics
+    port: 9707
+    # -- Service name for metrics
+    name: metrics
+    # -- Service annotations
+    annotations: {}
+
+  # ServiceMonitor configuration for Prometheus
+  serviceMonitor:
+    # -- Enable ServiceMonitor for Prometheus
+    enabled: false
+    # -- ServiceMonitor labels
+    labels: {}
+    # -- ServiceMonitor annotations
+    annotations: {}
+    # -- Scrape interval
+    interval: "4m"
+    # -- Scrape timeout
+    scrapeTimeout: "90s"
+    # -- Metrics path
+    path: "/metrics"
+    # -- Namespace selector
+    namespaceSelector: {}
+    # -- Target labels
+    targetLabels: []
+    # -- Metric relabeling configs
+    metricRelabelings: []
+    # -- Relabeling configs
+    relabelings: []
+
+  # Health checks
+  healthcheck:
+    # -- Enable health checks
+    enabled: true
+    # -- Liveness probe configuration
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 9707
+      failureThreshold: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+    # -- Readiness probe configuration
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 9707
+      failureThreshold: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # API key secret configuration
+  apiKeySecret:
+    # -- Name of secret containing API key
+    name: ""
+    # -- Key within secret containing API key
+    key: "api-key"
+    # -- Create secret with API key (not recommended for production)
+    create: false
+    # -- API key value (only used if create is true)
+    value: ""
+
+# Gluetun VPN configuration
+gluetun:
+  # -- Enable Gluetun VPN sidecar
+  enabled: false
+  
+  image:
+    # -- Gluetun image repository
+    repository: ghcr.io/qdm12/gluetun
+    # -- Gluetun image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Security context for Gluetun (requires NET_ADMIN capability)
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+
+  # Sidecar configuration
+  sidecar:
+    # -- Run as sidecar container sharing network with Bazarr
+    enabled: true
+
+  # Port forwarding configuration
+  ports:
+    # -- HTTP proxy port
+    httpProxy: 8888
+    # -- Shadowsocks TCP port  
+    shadowsocksTcp: 8388
+    # -- Shadowsocks UDP port
+    shadowsocksUdp: 8388
+    # -- Control server port
+    control: 8000
+
+  # Environment variables for VPN configuration
+  env:
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Enable HTTP proxy
+    HTTPPROXY: "on"
+    # -- Enable Shadowsocks
+    SHADOWSOCKS: "on"
+    # -- Firewall outbound subnets
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16"
+    # -- Enable VPN port forwarding
+    VPN_PORT_FORWARDING: "on"
+    # -- Server update period
+    UPDATER_PERIOD: "24h"
+
+  # VPN Provider configurations (uncomment and configure one)
+  vpn:
+    # NordVPN configuration
+    nordvpn:
+      # -- Enable NordVPN
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "nordvpn"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+
+    # Mullvad configuration  
+    mullvad:
+      # -- Enable Mullvad
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "mullvad"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+      # -- Wireguard addresses
+      addresses: ""
+      # -- Server cities
+      serverCities: "London"
+
+    # Private Internet Access configuration
+    pia:
+      # -- Enable Private Internet Access
+      enabled: true
+      # -- VPN service provider
+      serviceProvider: "private internet access"
+      # -- OpenVPN username (store in secret)
+      username: ""
+      # -- OpenVPN password (store in secret) 
+      password: ""
+      # -- Server regions
+      serverRegions: "UK London"
+
+  # Persistence for Gluetun
+  persistence:
+    # -- Enable persistence for Gluetun config
+    enabled: true
+    # -- Storage class
+    storageClass: ""
+    # -- Access mode
+    accessMode: ReadWriteOnce
+    # -- Volume size
+    size: 1Gi
+    # -- Mount path
+    mountPath: /gluetun
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Pod-level configuration  
+pod:
+  # -- Pod restart policy
+  restartPolicy: Always
+  # -- Pod security context
+  securityContext:
+    fsGroup: 1000
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  annotations: {}
+  # -- Pod labels
+  labels: {}
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# Network policies
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules
+  ingress: []
+  # -- Egress rules  
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  # -- Enable ServiceMonitor for Prometheus
+  enabled: false
+  # -- ServiceMonitor labels
+  labels: {}
+  # -- ServiceMonitor annotations
+  annotations: {}
+  # -- Scrape interval
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Metrics path
+  path: "/metrics"
+  # -- Additional scrape parameters
+  params: {}
+  # -- Basic auth configuration
+  basicAuth: {}
+  # -- Bearer token secret
+  bearerTokenSecret: {}
+  # -- TLS configuration
+  tlsConfig: {}
+  # -- Relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs
+  metricRelabelings: []
+  # -- Namespace selector
+  namespaceSelector: {}
+  # -- Target labels
+  targetLabels: []

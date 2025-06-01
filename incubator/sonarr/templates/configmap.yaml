@@ -1,0 +1,39 @@
+{{/*
+ConfigMap template for Sonarr
+Creates a Kubernetes ConfigMap resource containing configuration data,
+providing non-sensitive configuration settings and environment variables for the application.
+*/}}
+{{- if .Values.sonarr.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sonarr.fullname" . }}-config
+  labels:
+    {{- include "sonarr.labels" . | nindent 4 }}
+    component: config
+data:
+  {{- range $key, $value := .Values.sonarr.configMap.data }}
+  {{ $key }}: |
+    {{- $value | nindent 4 }}
+  {{- end }}
+  
+  # Default configuration
+  timezone: {{ .Values.global.timezone | quote }}
+  
+  {{- if .Values.sonarr.configMap.scripts }}
+  # Custom scripts
+  {{- range $name, $script := .Values.sonarr.configMap.scripts }}
+  {{ $name }}: |
+    {{- $script | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  
+  {{- if .Values.gluetun.enabled }}
+  # VPN configuration flags
+  vpn-enabled: "true"
+  {{- else }}
+  vpn-enabled: "false"
+  {{- end }}
+  
+
+{{- end }}

@@ -1,0 +1,404 @@
+# Default values for qbittorrent
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # -- Set the global timezone
+  timezone: "Europe/London"
+
+# qBittorrent configuration
+qbittorrent:
+  # -- Enable or disable qBittorrent
+  enabled: true
+  
+  image:
+    # -- qBittorrent image repository
+    repository: ghcr.io/hotio/qbittorrent
+    # -- qBittorrent image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Environment variables for qBittorrent
+  env:
+    # -- Process User ID
+    PUID: 1000
+    # -- Process Group ID  
+    PGID: 1000
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Umask setting
+    UMASK_SET: "022"
+    # -- Web UI ports (comma-separated for multiple ports)
+    WEBUI_PORTS: "8080"
+
+  # Service configuration
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- Service port for web UI
+    port: 8080
+    # -- Target port on the pod
+    targetPort: 8080
+    # -- Additional ports for torrent traffic
+    additionalPorts:
+      # -- BitTorrent TCP port
+      bittorrent:
+        port: 6881
+        targetPort: 6881
+        protocol: TCP
+      # -- BitTorrent UDP port for DHT
+      dht:
+        port: 6881
+        targetPort: 6881
+        protocol: UDP
+
+  # Ingress configuration
+  ingress:
+    # -- Enable ingress
+    enabled: false
+    # -- Ingress class name
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # -- Ingress hosts configuration
+    hosts:
+      - host: qbittorrent.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- TLS configuration
+    tls: []
+
+  # Persistence configuration
+  persistence:
+    # Configuration persistence
+    config:
+      # -- Enable config persistence
+      enabled: true
+      # -- Storage class for config volume
+      storageClass: ""
+      # -- Access mode for config volume
+      accessMode: ReadWriteOnce
+      # -- Size of config volume
+      size: 2Gi
+      # -- Mount path for config
+      mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+    # Downloads persistence
+    downloads:
+      # -- Enable downloads persistence
+      enabled: true
+      # -- Storage class for downloads volume
+      storageClass: ""
+      # -- Access mode for downloads volume
+      accessMode: ReadWriteOnce
+      # -- Size of downloads volume
+      size: 500Gi
+      # -- Mount path for downloads
+      mountPath: /downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+    # Data persistence (shared with *arr apps)
+    data:
+      # -- Enable data persistence for shared access
+      enabled: true
+      # -- Storage class for data volume
+      storageClass: ""
+      # -- Access mode for data volume
+      accessMode: ReadWriteOnce
+      # -- Size of data volume
+      size: 100Gi
+      # -- Mount path for data
+      mountPath: /data
+
+    # Incomplete downloads (optional separate volume)
+    incomplete:
+      # -- Enable incomplete downloads persistence
+      enabled: false
+      # -- Storage class for incomplete volume
+      storageClass: ""
+      # -- Access mode for incomplete volume
+      accessMode: ReadWriteOnce
+      # -- Size of incomplete volume
+      size: 100Gi
+      # -- Mount path for incomplete downloads
+      mountPath: /incomplete
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  # ConfigMap for additional configuration
+  configMap:
+    # -- Enable configMap creation
+    enabled: false
+    # -- Additional configuration data
+    data: {}
+    # -- Custom scripts
+    scripts: {}
+
+  # qBittorrent specific settings
+  settings:
+    # -- Alternative web UI (optional)
+    alternativeWebUI: false
+    # -- Alternative web UI URL
+    alternativeWebUIUrl: ""
+    # -- Enable anonymous mode
+    anonymousMode: false
+    # -- Enable auto-ban for failed attempts
+    autoBan: true
+    # -- Max failed login attempts before ban
+    maxFailedAttempts: 5
+    # -- Ban duration in seconds
+    banDuration: 3600
+
+  # Homepage integration labels
+  homepage:
+    # -- Enable homepage integration
+    enabled: true
+    # -- Homepage group
+    group: "Downloads"
+    # -- Homepage name
+    name: "qBittorrent"
+    # -- Homepage description
+    description: "Torrent Client"
+    # -- Homepage widget type
+    widget:
+      type: "qbittorrent"
+      # -- Internal URL for widget API calls
+      url: "http://qbittorrent:8080"
+      # -- Username for widget access
+      username: "admin"
+      # -- Password for widget access (set this in your deployment)
+      password: ""
+
+# Gluetun VPN configuration
+gluetun:
+  # -- Enable Gluetun VPN sidecar (highly recommended for torrents)
+  enabled: true
+  
+  image:
+    # -- Gluetun image repository
+    repository: ghcr.io/qdm12/gluetun
+    # -- Gluetun image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Security context for Gluetun (requires NET_ADMIN capability)
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+
+  # Sidecar configuration
+  sidecar:
+    # -- Run as sidecar container sharing network with qBittorrent
+    enabled: true
+
+  # Port forwarding configuration
+  ports:
+    # -- HTTP proxy port
+    httpProxy: 8888
+    # -- Shadowsocks TCP port  
+    shadowsocksTcp: 8388
+    # -- Shadowsocks UDP port
+    shadowsocksUdp: 8388
+    # -- Control server port
+    control: 8000
+
+  # Environment variables for VPN configuration
+  env:
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Enable HTTP proxy
+    HTTPPROXY: "on"
+    # -- Enable Shadowsocks
+    SHADOWSOCKS: "on"
+    # -- Firewall outbound subnets
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16"
+    # -- Enable VPN port forwarding (important for torrents)
+    VPN_PORT_FORWARDING: "on"
+    # -- Server update period
+    UPDATER_PERIOD: "24h"
+
+  # VPN Provider configurations (uncomment and configure one)
+  vpn:
+    # NordVPN configuration
+    nordvpn:
+      # -- Enable NordVPN
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "nordvpn"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+
+    # Mullvad configuration  
+    mullvad:
+      # -- Enable Mullvad
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "mullvad"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+      # -- Wireguard addresses
+      addresses: ""
+      # -- Server cities
+      serverCities: "London"
+
+    # Private Internet Access configuration
+    pia:
+      # -- Enable Private Internet Access
+      enabled: true
+      # -- VPN service provider
+      serviceProvider: "private internet access"
+      # -- OpenVPN username (store in secret)
+      username: ""
+      # -- OpenVPN password (store in secret) 
+      password: ""
+      # -- Server regions
+      serverRegions: "UK London"
+
+  # Persistence for Gluetun
+  persistence:
+    # -- Enable persistence for Gluetun config
+    enabled: true
+    # -- Storage class
+    storageClass: ""
+    # -- Access mode
+    accessMode: ReadWriteOnce
+    # -- Volume size
+    size: 1Gi
+    # -- Mount path
+    mountPath: /gluetun
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+
+# Pod-level configuration  
+pod:
+  # -- Pod restart policy
+  restartPolicy: Always
+  # -- Pod security context
+  securityContext:
+    fsGroup: 1000
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  annotations: {}
+  # -- Pod labels
+  labels: {}
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# Network policies
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules
+  ingress: []
+  # -- Egress rules  
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+  # -- Maximum number of pods that can be unavailable
+  maxUnavailable: ""
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  # -- Enable ServiceMonitor for Prometheus
+  enabled: false
+  # -- ServiceMonitor labels
+  labels: {}
+  # -- ServiceMonitor annotations
+  annotations: {}
+  # -- Scrape interval
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Metrics path
+  path: "/metrics"
+  # -- Additional scrape parameters
+  params: {}
+  # -- Basic auth configuration
+  basicAuth: {}
+  # -- Bearer token secret
+  bearerTokenSecret: {}
+  # -- TLS configuration
+  tlsConfig: {}
+  # -- Relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs
+  metricRelabelings: []
+  # -- Namespace selector
+  namespaceSelector: {}
+  # -- Target labels
+  targetLabels: []

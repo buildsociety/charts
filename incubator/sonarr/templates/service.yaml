@@ -1,0 +1,26 @@
+{{/*
+Service template for Sonarr
+Creates a Kubernetes Service resource that exposes the Sonarr application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sonarr.fullname" . }}
+  labels:
+    {{- include "sonarr.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.sonarr.service.type }}
+  ports:
+    - port: {{ .Values.sonarr.service.port }}
+      targetPort: {{ .Values.sonarr.service.targetPort }}
+      protocol: TCP
+      name: http
+    {{- if .Values.exportarr.enabled }}
+    - port: {{ .Values.exportarr.service.port }}
+      targetPort: {{ .Values.exportarr.env.PORT }}
+      protocol: TCP
+      name: {{ .Values.exportarr.service.name }}
+    {{- end }}
+  selector:
+    {{- include "sonarr.selectorLabels" . | nindent 4 }}

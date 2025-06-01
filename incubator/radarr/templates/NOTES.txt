@@ -1,0 +1,106 @@
+1. Get the application URL by running these commands:
+{{- if .Values.radarr.ingress.enabled }}
+{{- range $host := .Values.radarr.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.radarr.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.radarr.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "radarr.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.radarr.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "radarr.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "radarr.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.radarr.service.port }}
+{{- else if contains "ClusterIP" .Values.radarr.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{- include "radarr.selectorLabels" . | nindent 4 }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Configuration:
+   - Default username: admin (if first time setup)
+   - Web interface port: {{ .Values.radarr.service.port }}
+   
+{{- if .Values.gluetun.enabled }}
+
+3. VPN Configuration (Gluetun):
+   - VPN is ENABLED and running as a sidecar container
+   - All Radarr traffic will route through the VPN
+   {{- if .Values.gluetun.vpn.pia.enabled }}
+   - Using Private Internet Access (PIA)
+   - Server regions: {{ .Values.gluetun.vpn.pia.serverRegions }}
+   {{- else if .Values.gluetun.vpn.nordvpn.enabled }}
+   - Using NordVPN with WireGuard
+   {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+   - Using Mullvad with WireGuard
+   - Server cities: {{ .Values.gluetun.vpn.mullvad.serverCities }}
+   {{- end }}
+   
+   VPN Control Interface:
+   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:{{ .Values.gluetun.ports.control }}
+   # Then visit http://127.0.0.1:8000
+   
+   HTTP Proxy (if enabled):
+   - Port: {{ .Values.gluetun.ports.httpProxy }}
+   
+   To check VPN status:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c gluetun
+
+{{- else }}
+
+3. VPN Configuration:
+   - VPN is DISABLED
+   - Radarr will connect directly to the internet
+   - Consider enabling Gluetun for privacy and security
+
+{{- end }}
+
+
+
+4. Storage:
+{{- if .Values.radarr.persistence.config.enabled }}
+   - Config: {{ .Values.radarr.persistence.config.size }} ({{ .Values.radarr.persistence.config.mountPath }})
+{{- end }}
+{{- if .Values.radarr.persistence.downloads.enabled }}
+   - Downloads: {{ .Values.radarr.persistence.downloads.size }} ({{ .Values.radarr.persistence.downloads.mountPath }})
+{{- end }}
+{{- if .Values.radarr.persistence.movies.enabled }}
+   - Movies: {{ .Values.radarr.persistence.movies.size }} ({{ .Values.radarr.persistence.movies.mountPath }})
+{{- end }}
+
+5. Security:
+   - Running as UID/GID: {{ .Values.radarr.env.PUID }}/{{ .Values.radarr.env.PGID }}
+   - Timezone: {{ .Values.radarr.env.TZ }}
+   
+6. Troubleshooting:
+   
+   View logs:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c radarr
+   
+   Get shell access:
+   kubectl --namespace {{ .Release.Namespace }} exec -it $POD_NAME -c radarr -- /bin/bash
+   
+   Check all containers in pod:
+   kubectl --namespace {{ .Release.Namespace }} describe pod $POD_NAME
+
+{{- if .Values.radarr.homepage.enabled }}
+
+7. Homepage Integration:
+   - Labels configured for homepage dashboard integration
+   - Group: {{ .Values.radarr.homepage.group }}
+   - Widget type: {{ .Values.radarr.homepage.widget.type }}
+{{- if .Values.radarr.homepage.widget.key }}
+   - API key configured for widget
+{{- else }}
+   - Remember to set homepage.widget.key in values.yaml for full widget functionality
+{{- end }}
+
+{{- end }}
+
+For more information, visit:
+- Radarr documentation: https://wiki.servarr.com/radarr
+- Chart repository: https://github.com/your-repo/charts

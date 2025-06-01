@@ -1,0 +1,21 @@
+apiVersion: v2
+name: radarr
+description: A Helm chart for Radarr - A fork of Sonarr to work with movies à la Couchpotato
+type: application
+version: 0.1.0
+appVersion: "5.8.3"
+keywords:
+  - radarr
+  - media
+  - automation
+  - pvr
+  - movies
+  - download
+home: https://radarr.video/
+sources:
+  - https://github.com/Radarr/Radarr
+  - https://github.com/linuxserver/docker-radarr
+icon: https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

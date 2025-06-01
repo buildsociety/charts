@@ -1,0 +1,317 @@
+# Production qBittorrent Configuration
+# This example shows a production-ready qBittorrent setup with VPN, monitoring, and high performance
+
+qbittorrent:
+  enabled: true
+  
+  # Production image configuration
+  image:
+    repository: ghcr.io/hotio/qbittorrent
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+    WEBUI_PORTS: "8080"
+
+  # High-performance resource configuration
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+  # Production persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+      
+    downloads:
+      enabled: true
+      size: 2Ti
+      storageClass: "large-hdd"
+      accessMode: ReadWriteOnce
+      
+    data:
+      enabled: true
+      size: 500Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+      
+    incomplete:
+      enabled: true
+      size: 500Gi
+      storageClass: "nvme-ssd"
+      accessMode: ReadWriteOnce
+
+  # Service configuration with torrent ports
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+    additionalPorts:
+      bittorrent:
+        port: 6881
+        targetPort: 6881
+        protocol: TCP
+      dht:
+        port: 6881
+        targetPort: 6881
+        protocol: UDP
+
+  # Production ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: qbittorrent-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - qBittorrent"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/rate-limit: "50"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      nginx.ingress.kubernetes.io/server-snippet: |
+        location /api/ {
+          limit_req zone=api burst=20 nodelay;
+        }
+    hosts:
+      - host: qbittorrent.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: qbittorrent-tls
+        hosts:
+          - qbittorrent.example.com
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  # qBittorrent production settings
+  settings:
+    alternativeWebUI: false
+    alternativeWebUIUrl: ""
+    anonymousMode: true
+    autoBan: true
+    maxFailedAttempts: 3
+    banDuration: 7200
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Downloads"
+    name: "qBittorrent"
+    description: "Production Torrent Client"
+    widget:
+      type: "qbittorrent"
+      url: "https://qbittorrent.example.com"
+      username: "admin"
+      password: "your-production-password"
+
+# Gluetun VPN Configuration for Production
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsNonRoot: false
+
+  # Production VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      username: "your-production-pia-username"
+      password: "your-production-pia-password"
+      serverRegions: "UK London"
+    
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: "fast-ssd"
+    accessMode: ReadWriteOnce
+
+  # VPN resource configuration
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Pod-level configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+  
+  # Production node placement
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+    storage-type: "high-performance"
+  
+  # Tolerations for dedicated download nodes
+  tolerations:
+    - key: "download-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+    - key: "high-performance"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
+  # Anti-affinity to ensure single instance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - qbittorrent
+          topologyKey: kubernetes.io/hostname
+
+  # Production annotations
+  annotations:
+    backup.velero.io/backup-volumes: "config"
+    backup.velero.io/backup-volumes-excludes: "downloads,data,incomplete"
+    security.policy: "vpn-required"
+    performance.tier: "high"
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    description: "qBittorrent production service account"
+
+# Network policies for production security
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow access from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow access from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow access from *arr applications
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: media
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: radarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lidarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: readarr
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Allow HTTPS for VPN, updates, and trackers
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # Allow BitTorrent traffic through VPN
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 6881
+        - protocol: UDP
+          port: 6881
+
+# Pod Disruption Budget (disabled for single-instance torrent client)
+podDisruptionBudget:
+  enabled: false
+  # Note: qBittorrent should run as single instance to maintain state consistency
+
+# Service Monitor for Prometheus monitoring
+serviceMonitor:
+  enabled: true
+  labels:
+    app: qbittorrent
+    release: prometheus
+  annotations:
+    description: "qBittorrent metrics collection"
+  interval: "60s"
+  scrapeTimeout: "30s"
+  path: "/metrics"  # Note: qBittorrent doesn't expose native Prometheus metrics
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+
+# Global settings
+global:
+  timezone: "Europe/London"

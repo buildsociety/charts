@@ -1,0 +1,142 @@
+1. Get the application URL by running these commands:
+{{- if .Values.readarr.ingress.enabled }}
+{{- range $host := .Values.readarr.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.readarr.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.readarr.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "readarr.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.readarr.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "readarr.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "readarr.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.readarr.service.port }}
+{{- else if contains "ClusterIP" .Values.readarr.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{- include "readarr.selectorLabels" . | nindent 4 }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Configuration:
+   - Default username: admin (if first time setup)
+   - Web interface port: {{ .Values.readarr.service.port }}
+   - Readarr manages ebooks and audiobooks automatically
+   
+{{- if .Values.gluetun.enabled }}
+
+3. VPN Configuration (Gluetun):
+   - VPN is ENABLED and running as a sidecar container
+   - All Readarr traffic will route through the VPN
+   {{- if .Values.gluetun.vpn.pia.enabled }}
+   - Using Private Internet Access (PIA)
+   - Server regions: {{ .Values.gluetun.vpn.pia.serverRegions }}
+   {{- else if .Values.gluetun.vpn.nordvpn.enabled }}
+   - Using NordVPN with WireGuard
+   {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+   - Using Mullvad with WireGuard
+   - Server cities: {{ .Values.gluetun.vpn.mullvad.serverCities }}
+   {{- end }}
+   
+   VPN Control Interface:
+   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:{{ .Values.gluetun.ports.control }}
+   # Then visit http://127.0.0.1:8000
+   
+   HTTP Proxy (if enabled):
+   - Port: {{ .Values.gluetun.ports.httpProxy }}
+   
+   To check VPN status:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c gluetun
+
+{{- else }}
+
+3. VPN Configuration:
+   - VPN is DISABLED
+   - Readarr will connect directly to the internet
+   - Consider enabling Gluetun for privacy and security
+
+{{- end }}
+
+
+4. Storage:
+{{- if .Values.readarr.persistence.config.enabled }}
+   - Config: {{ .Values.readarr.persistence.config.size }} ({{ .Values.readarr.persistence.config.mountPath }})
+{{- end }}
+{{- if .Values.readarr.persistence.downloads.enabled }}
+   - Downloads: {{ .Values.readarr.persistence.downloads.size }} ({{ .Values.readarr.persistence.downloads.mountPath }})
+{{- end }}
+{{- if .Values.readarr.persistence.books.enabled }}
+   - Books: {{ .Values.readarr.persistence.books.size }} ({{ .Values.readarr.persistence.books.mountPath }})
+{{- end }}
+{{- if .Values.readarr.persistence.audiobooks.enabled }}
+   - Audiobooks: {{ .Values.readarr.persistence.audiobooks.size }} ({{ .Values.readarr.persistence.audiobooks.mountPath }})
+{{- end }}
+
+5. Security:
+   - Running as UID/GID: {{ .Values.readarr.env.PUID }}/{{ .Values.readarr.env.PGID }}
+   - Timezone: {{ .Values.readarr.env.TZ }}
+   
+6. Troubleshooting:
+   
+   View logs:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c readarr
+   
+   Get shell access:
+   kubectl --namespace {{ .Release.Namespace }} exec -it $POD_NAME -c readarr -- /bin/bash
+   
+   Check all containers in pod:
+   kubectl --namespace {{ .Release.Namespace }} describe pod $POD_NAME
+
+{{- if .Values.readarr.homepage.enabled }}
+
+7. Homepage Integration:
+   - Labels configured for homepage dashboard integration
+   - Group: {{ .Values.readarr.homepage.group }}
+   - Widget type: {{ .Values.readarr.homepage.widget.type }}
+{{- if .Values.readarr.homepage.widget.key }}
+   - API key configured for widget
+{{- else }}
+   - Remember to set homepage.widget.key in values.yaml for full widget functionality
+{{- end }}
+
+{{- end }}
+
+8. Book Management Setup:
+   
+   Configure Root Folders:
+   - Go to Settings > Media Management > Root Folders
+   - Add paths for Books: {{ .Values.readarr.persistence.books.mountPath }}
+   {{- if .Values.readarr.persistence.audiobooks.enabled }}
+   - Add paths for Audiobooks: {{ .Values.readarr.persistence.audiobooks.mountPath }}
+   {{- end }}
+   
+   Setup Indexers:
+   - Go to Settings > Indexers
+   - Add book indexers (Newznab, Torznab, etc.)
+   - Configure indexer credentials and categories
+   
+   Configure Download Clients:
+   - Go to Settings > Download Clients
+   - Add qBittorrent, SABnzbd, or other download clients
+   - Set up categories and post-processing
+   
+   Metadata Integration:
+   - Consider integrating with Calibre for metadata management
+   - Configure metadata profiles in Settings > Profiles
+
+9. Book Formats and Quality:
+   - Configure quality profiles for different book formats
+   - Support for EPUB, MOBI, PDF, and audiobook formats
+   - Set up custom formats for preferred sources
+
+10. Import Existing Library:
+    - Use Settings > Import Lists to add existing book collections
+    - Configure Goodreads or other book database integrations
+    - Set up automated author monitoring
+
+For more information, visit:
+- Readarr documentation: https://wiki.servarr.com/readarr
+- Chart repository: https://github.com/your-repo/charts

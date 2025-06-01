@@ -1,0 +1,22 @@
+# Example with multiple domains and mixed record types
+cloudflareddns:
+  credentials:
+    apiToken: "your-api-token-here"
+  
+  # Multiple domains with different zones
+  hosts: "home.example.com;office.company.net;vpn.personal.org;server.example.com"
+  zones: "example.com;company.net;personal.org;example.com"
+  recordTypes: "A;A;A;AAAA"
+  
+  env:
+    # Check every 5 minutes
+    INTERVAL: "300"
+    # Standard logging
+    LOG_LEVEL: "3"
+    # Alternative IP detection method
+    DETECTION_MODE: "curl-ifconfig.me"
+    
+  # Extra environment variables
+  extraEnvVars:
+    - name: CF_PROXY
+      value: "false"  # Don't proxy through Cloudflare

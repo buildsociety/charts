@@ -1,0 +1,258 @@
+# Example NFS configuration for Readarr
+# This shows how to use NFS shares for book storage with Readarr
+
+# Basic Readarr configuration
+readarr:
+  enabled: true
+  
+  image:
+    repository: linuxserver/readarr
+    tag: "latest"
+  
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+  
+  service:
+    type: ClusterIP
+    port: 8787
+  
+  # Persistence configuration with NFS
+  persistence:
+    # Config storage - can use local storage for better performance
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "fast-ssd"  # Use local storage for configs
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads storage - NFS share for downloads
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/downloads"  # NFS export path
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Books storage - NFS share for ebook library
+    books:
+      enabled: true
+      size: 1Ti
+      accessMode: ReadWriteMany
+      mountPath: /books
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/books"  # NFS export path for books
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Audiobooks storage - NFS share for audiobook library
+    audiobooks:
+      enabled: true
+      size: 2Ti
+      accessMode: ReadWriteMany
+      mountPath: /audiobooks
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/audiobooks"  # NFS export path for audiobooks
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Data storage - shared data between apps
+    data:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /data
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/data"  # NFS export path for shared data
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Alternative configuration using existing NFS PVCs
+# Uncomment and modify this section if you already have NFS PVCs created
+#
+# readarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       existingClaim: "readarr-config-pvc"
+#       mountPath: /config
+#     
+#     downloads:
+#       enabled: true
+#       existingClaim: "shared-downloads-nfs"
+#       mountPath: /downloads
+#     
+#     books:
+#       enabled: true
+#       existingClaim: "shared-books-nfs"
+#       mountPath: /books
+#     
+#     audiobooks:
+#       enabled: true
+#       existingClaim: "shared-audiobooks-nfs"
+#       mountPath: /audiobooks
+#     
+#     data:
+#       enabled: true
+#       existingClaim: "shared-data-nfs"
+#       mountPath: /data
+
+# Mixed storage strategy example
+# Use local storage for configs, NFS for media
+# readarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       storageClass: "local-path"
+#       size: 5Gi
+#     books:
+#       enabled: true
+#       nfs:
+#         enabled: true
+#         server: "192.168.1.100"
+#         path: "/volume1/media/books"
+#     audiobooks:
+#       enabled: true
+#       nfs:
+#         enabled: true
+#         server: "192.168.1.100"
+#         path: "/volume1/media/audiobooks"
+
+# Exportarr monitoring (optional)
+exportarr:
+  enabled: true
+  image:
+    repository: ghcr.io/onedr0p/exportarr
+    tag: "v2.0"
+  env:
+    PORT: "9707"
+    URL: "http://localhost:8787"
+    # API key should be configured after Readarr is running
+    APIKEY: ""
+
+# Security context for NFS compatibility
+pod:
+  securityContext:
+    fsGroup: 1000  # Should match your NFS export user/group
+    fsGroupChangePolicy: "OnRootMismatch"
+
+# Service account
+serviceAccount:
+  create: true
+
+---
+# Example of manually created shared NFS PVs (optional)
+# You can create these separately and reference them via existingClaim
+#
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shared-books-nfs
+# spec:
+#   capacity:
+#     storage: 1Ti
+#   accessModes:
+#     - ReadWriteMany
+#   nfs:
+#     server: 192.168.1.100
+#     path: /volume1/media/books
+#   mountOptions:
+#     - nfsvers=4.1
+#     - hard
+#     - intr
+#     - rsize=1048576
+#     - wsize=1048576
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: ""
+# 
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: shared-books-nfs
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 1Ti
+#   volumeName: shared-books-nfs
+#   storageClassName: ""
+#
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shared-audiobooks-nfs
+# spec:
+#   capacity:
+#     storage: 2Ti
+#   accessModes:
+#     - ReadWriteMany
+#   nfs:
+#     server: 192.168.1.100
+#     path: /volume1/media/audiobooks
+#   mountOptions:
+#     - nfsvers=4.1
+#     - hard
+#     - intr
+#     - rsize=1048576
+#     - wsize=1048576
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: ""
+# 
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: shared-audiobooks-nfs
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 2Ti
+#   volumeName: shared-audiobooks-nfs
+#   storageClassName: ""

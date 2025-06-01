@@ -1,0 +1,324 @@
+# Global configuration
+global:
+  # Default storage class for all persistent volumes
+  storageClass: ""
+  
+  # Shared storage configuration for media files
+  media:
+    # Enable shared media storage across all applications
+    enabled: true
+    # Storage class for media volumes
+    storageClass: ""
+    # Size of media storage
+    size: 1Ti
+    # Access mode
+    accessMode: ReadWriteMany
+    # Existing claim name (optional)
+    existingClaim: ""
+
+  # Shared download storage configuration
+  downloads:
+    # Enable shared downloads storage
+    enabled: true
+    # Storage class for download volumes
+    storageClass: ""
+    # Size of downloads storage
+    size: 500Gi
+    # Access mode
+    accessMode: ReadWriteMany
+    # Existing claim name (optional)
+    existingClaim: ""
+
+  # Network configuration
+  network:
+    # Use VPN for download clients
+    useVPN: true
+    # VPN provider (for gluetun)
+    vpnProvider: "nordvpn"
+
+# Gluetun VPN configuration
+gluetun:
+  enabled: true
+  image:
+    repository: qmcgaw/gluetun
+    tag: latest
+  env:
+    VPN_SERVICE_PROVIDER: nordvpn
+    VPN_TYPE: openvpn
+    # Set your VPN credentials via secrets
+    # OPENVPN_USER: ""
+    # OPENVPN_PASSWORD: ""
+  service:
+    main:
+      ports:
+        http:
+          port: 8000
+  persistence:
+    config:
+      enabled: true
+      size: 1Gi
+
+# SABnzbd Usenet downloader
+sabnzbd:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/sabnzbd
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 8080
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    downloads:
+      enabled: true
+      size: 100Gi
+      mountPath: /downloads
+    incomplete-downloads:
+      enabled: true
+      size: 50Gi
+      mountPath: /incomplete-downloads
+  # Use VPN network if enabled
+  podAnnotations:
+    k8s.v1.cni.cncf.io/networks: gluetun
+
+# qBittorrent torrent downloader
+qbittorrent:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/qbittorrent
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+    WEBUI_PORT: 8080
+  service:
+    main:
+      ports:
+        http:
+          port: 8080
+    bittorrent:
+      enabled: true
+      ports:
+        bittorrent:
+          port: 6881
+          protocol: TCP
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    downloads:
+      enabled: true
+      size: 100Gi
+      mountPath: /downloads
+  # Use VPN network if enabled
+  podAnnotations:
+    k8s.v1.cni.cncf.io/networks: gluetun
+
+# Prowlarr indexer manager
+prowlarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/prowlarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 9696
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:9696"
+
+# Sonarr TV show manager
+sonarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/sonarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 8989
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    media:
+      enabled: true
+      size: 500Gi
+      mountPath: /tv
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:8989"
+
+# Radarr movie manager
+radarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/radarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 7878
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    media:
+      enabled: true
+      size: 500Gi
+      mountPath: /movies
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:7878"
+
+# Lidarr music manager
+lidarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/lidarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 8686
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    media:
+      enabled: true
+      size: 500Gi
+      mountPath: /music
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:8686"
+
+# Readarr book manager
+readarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/readarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 8787
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+    media:
+      enabled: true
+      size: 100Gi
+      mountPath: /books
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:8787"
+
+# Bazarr subtitle manager
+bazarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/bazarr
+    tag: latest
+  env:
+    TZ: UTC
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      ports:
+        http:
+          port: 6767
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+    media:
+      enabled: true
+      size: 10Gi
+      mountPath: /media
+  # Monitoring configuration
+  exportarr:
+    enabled: true
+    image:
+      repository: onedr0p/exportarr
+      tag: latest
+    port: 9707
+    config:
+      api_key: ""  # Will be auto-configured
+      url: "http://localhost:6767"

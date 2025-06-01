@@ -1,0 +1,438 @@
+# NFS Configuration Example for Media Centre
+# This example shows how to configure all media applications to use NFS shares
+# Ideal for home setups with Synology, QNAP, or other NAS devices
+
+# Global configuration for shared NFS storage
+global:
+  # NFS server configuration
+  nfs:
+    server: "192.168.1.100"  # Your NAS IP address
+    
+  # Shared media storage on NFS
+  media:
+    enabled: true
+    size: 10Ti
+    accessMode: ReadWriteMany
+    # Use existing NFS-backed PVC if you have one
+    # existingClaim: "shared-media-nfs"
+    
+  # Shared downloads storage on NFS  
+  downloads:
+    enabled: true
+    size: 2Ti
+    accessMode: ReadWriteMany
+    # Use existing NFS-backed PVC if you have one
+    # existingClaim: "shared-downloads-nfs"
+
+# VPN Configuration (uses local storage for performance)
+gluetun:
+  enabled: true
+  image:
+    repository: qmcgaw/gluetun
+    tag: "v3.37.0"
+  env:
+    VPN_SERVICE_PROVIDER: "nordvpn"
+    VPN_TYPE: "openvpn"
+    # Configure via secrets in production
+  persistence:
+    config:
+      enabled: true
+      size: 1Gi
+      storageClass: "local-path"  # Use local storage for VPN configs
+
+# SABnzbd with NFS storage
+sabnzbd:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/sabnzbd
+    tag: "4.1.0"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    # Config on local fast storage
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads on NFS share
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+          - retrans=2
+          
+    # Incomplete downloads on local fast storage for better performance
+    incomplete:
+      enabled: true
+      size: 100Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /incomplete-downloads
+
+# qBittorrent with NFS storage
+qbittorrent:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/qbittorrent
+    tag: "4.6.0"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    # Config on local storage
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads on NFS share (shared with SABnzbd)
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+          - retrans=2
+
+# Prowlarr (indexer management)
+prowlarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/prowlarr
+    tag: "1.10.5"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    # Config on local storage for better performance
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+  exportarr:
+    enabled: true
+
+# Sonarr (TV shows) with NFS media storage
+sonarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/sonarr
+    tag: "4.0.0"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      type: LoadBalancer  # Expose for easy access
+  persistence:
+    # Config on local storage
+    config:
+      enabled: true
+      size: 10Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads on NFS (shared with download clients)
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+          
+    # TV shows media library on NFS
+    tv:
+      enabled: true
+      size: 5Ti
+      accessMode: ReadWriteMany
+      mountPath: /tv
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/tv"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+  exportarr:
+    enabled: true
+
+# Radarr (movies) with NFS media storage
+radarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/radarr
+    tag: "5.1.3"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  service:
+    main:
+      type: LoadBalancer  # Expose for easy access
+  persistence:
+    # Config on local storage
+    config:
+      enabled: true
+      size: 10Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads on NFS (shared with download clients)
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+          
+    # Movies media library on NFS
+    movies:
+      enabled: true
+      size: 8Ti
+      accessMode: ReadWriteMany
+      mountPath: /movies
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/movies"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+  exportarr:
+    enabled: true
+
+# Lidarr (music) with NFS media storage
+lidarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/lidarr
+    tag: "2.0.7"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    # Config on local storage
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads on NFS (shared)
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+          
+    # Music library on NFS
+    music:
+      enabled: true
+      size: 2Ti
+      accessMode: ReadWriteMany
+      mountPath: /music
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/music"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+  exportarr:
+    enabled: true
+
+# Readarr (books) - disabled by default, enable if needed
+readarr:
+  enabled: false
+  image:
+    repository: lscr.io/linuxserver/readarr
+    tag: "0.3.10"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/downloads"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+    books:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /books
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/books"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+
+# Bazarr (subtitles) with NFS media access
+bazarr:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/bazarr
+    tag: "1.4.0"
+  env:
+    TZ: "America/New_York"
+    PUID: 1000
+    PGID: 1000
+  persistence:
+    # Config on local storage
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: "local-path"
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Media access for subtitle management (NFS)
+    media:
+      enabled: true
+      size: 10Ti
+      accessMode: ReadWriteMany
+      mountPath: /media
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media"
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+  exportarr:
+    enabled: true
+
+# Alternative: Using Existing NFS PVCs
+# If you prefer to create PVs/PVCs manually, you can reference them:
+#
+# sonarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       existingClaim: "sonarr-config-local"
+#     tv:
+#       enabled: true
+#       existingClaim: "shared-tv-nfs"
+#     downloads:
+#       enabled: true
+#       existingClaim: "shared-downloads-nfs"
+
+# NFS Server Preparation Notes:
+# 
+# 1. Create NFS exports on your NAS:
+#    /volume1/media          192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
+#    /volume1/downloads      192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
+#
+# 2. Set proper permissions:
+#    chown -R 1000:1000 /volume1/media /volume1/downloads
+#    chmod -R 755 /volume1/media /volume1/downloads
+#
+# 3. Install NFS client on Kubernetes nodes:
+#    Ubuntu/Debian: sudo apt-get install nfs-common
+#    CentOS/RHEL: sudo yum install nfs-utils
+#
+# 4. Test NFS connectivity:
+#    sudo mount -t nfs4 192.168.1.100:/volume1/media /mnt/test

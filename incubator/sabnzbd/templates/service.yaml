@@ -1,0 +1,32 @@
+{{/*
+Service template for SABnzbd
+Creates a Kubernetes Service resource that exposes the SABnzbd application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sabnzbd.fullname" . }}
+  labels:
+    {{- include "sabnzbd.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.sabnzbd.service.type }}
+  ports:
+    - port: {{ .Values.sabnzbd.service.port }}
+      targetPort: {{ .Values.sabnzbd.service.targetPort }}
+      protocol: TCP
+      name: http
+    {{- range .Values.sabnzbd.service.additionalPorts }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol }}
+      name: {{ .name }}
+    {{- end }}
+    {{- if .Values.exportarr.enabled }}
+    - port: {{ .Values.exportarr.service.port }}
+      targetPort: {{ .Values.exportarr.env.PORT }}
+      protocol: TCP
+      name: {{ .Values.exportarr.service.name }}
+    {{- end }}
+  selector:
+    {{- include "sabnzbd.selectorLabels" . | nindent 4 }}

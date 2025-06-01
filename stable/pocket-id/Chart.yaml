@@ -1,5 +1,19 @@
-apiVersion: v1
-appVersion: "20.07.2"
-description: A Helm chart for pocket-id https://github.com/stonith404/pocket-id/
+apiVersion: v2
 name: pocket-id
-version: 0.0.1
+version: 0.0.3
+appVersion: "latest"
+description: Simple and secure self-hosted SSO solution written in Go
+type: application
+home: https://github.com/stonith404/pocket-id
+sources:
+  - https://github.com/stonith404/pocket-id
+keywords:
+  - pocket-id
+  - sso
+  - authentication
+  - identity
+  - oauth
+  - self-hosted
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

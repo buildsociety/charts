@@ -1,0 +1,21 @@
+{{/*
+Service template for Pocket ID
+Creates a Kubernetes Service resource that exposes the Pocket ID application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pocket-id.fullname" . }}-service
+  labels:
+{{ include "pocket-id.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "pocket-id.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

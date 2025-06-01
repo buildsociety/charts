@@ -1,0 +1,82 @@
+{{/*
+NetworkPolicy template for Bazarr
+Creates a Kubernetes NetworkPolicy resource that controls network traffic flow,
+defining ingress and egress rules for enhanced security and network isolation.
+*/}}
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "bazarr.fullname" . }}
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: networkpolicy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "bazarr.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress to Bazarr web interface
+    - from:
+        - {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.bazarr.service.targetPort }}
+    {{- if .Values.gluetun.enabled }}
+    # Allow ingress to gluetun control interface
+    - from:
+        - {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.gluetun.ports.control }}
+        - protocol: TCP
+          port: {{ .Values.gluetun.ports.httpProxy }}
+        - protocol: TCP
+          port: {{ .Values.gluetun.ports.shadowsocksTcp }}
+        - protocol: UDP
+          port: {{ .Values.gluetun.ports.shadowsocksUdp }}
+    {{- end }}
+    {{- with .Values.networkPolicy.ingress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  egress:
+    # Allow DNS resolution
+    - to: [{}]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if .Values.gluetun.enabled }}
+    # Allow VPN traffic
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 1194
+        - protocol: UDP
+          port: 51820
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 1723
+    {{- else }}
+    # Allow HTTPS traffic for API calls and downloads
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    {{- end }}
+    # Allow communication to other services in cluster
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Release.Namespace }}
+    {{- with .Values.networkPolicy.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

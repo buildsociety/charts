@@ -1,0 +1,236 @@
+# Example NFS configuration for Bazarr
+# This shows how to use NFS shares for subtitle management with Bazarr
+
+# Basic Bazarr configuration
+bazarr:
+  enabled: true
+  
+  image:
+    repository: linuxserver/bazarr
+    tag: "latest"
+  
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+  
+  service:
+    type: ClusterIP
+    port: 6767
+  
+  # Persistence configuration with NFS
+  persistence:
+    # Config storage - can use local storage for better performance
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: "fast-ssd"  # Use local storage for configs
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # TV shows storage - NFS share for TV library (read-write for subtitles)
+    tv:
+      enabled: true
+      size: 5Ti
+      accessMode: ReadWriteMany
+      mountPath: /tv
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/tv"  # NFS export path for TV shows
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Movies storage - NFS share for movie library (read-write for subtitles)
+    movies:
+      enabled: true
+      size: 8Ti
+      accessMode: ReadWriteMany
+      mountPath: /movies
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/movies"  # NFS export path for movies
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Anime storage - NFS share for anime library (read-write for subtitles)
+    anime:
+      enabled: true
+      size: 2Ti
+      accessMode: ReadWriteMany
+      mountPath: /anime
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/anime"  # NFS export path for anime
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Alternative configuration using existing NFS PVCs
+# Uncomment and modify this section if you already have NFS PVCs created
+# This is ideal when sharing media volumes with other applications
+#
+# bazarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       existingClaim: "bazarr-config-pvc"
+#       mountPath: /config
+#     
+#     tv:
+#       enabled: true
+#       existingClaim: "shared-tv-nfs"  # Same as used by Sonarr
+#       mountPath: /tv
+#     
+#     movies:
+#       enabled: true
+#       existingClaim: "shared-movies-nfs"  # Same as used by Radarr
+#       mountPath: /movies
+#     
+#     anime:
+#       enabled: true
+#       existingClaim: "shared-anime-nfs"
+#       mountPath: /anime
+
+# Mixed storage strategy example
+# Use local storage for configs, shared NFS for media
+# bazarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       storageClass: "local-path"
+#       size: 2Gi
+#     tv:
+#       enabled: true
+#       existingClaim: "sonarr-tv"  # Share with Sonarr
+#     movies:
+#       enabled: true
+#       existingClaim: "radarr-movies"  # Share with Radarr
+
+# Single media volume approach
+# Use one NFS share for all media types
+# bazarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       storageClass: "local-path"
+#       size: 2Gi
+#     media:
+#       enabled: true
+#       size: 15Ti
+#       accessMode: ReadWriteMany
+#       mountPath: /media
+#       nfs:
+#         enabled: true
+#         server: "192.168.1.100"
+#         path: "/volume1/media"
+#         mountOptions:
+#           - nfsvers=4.1
+#           - hard
+#           - intr
+
+# Exportarr monitoring (optional)
+exportarr:
+  enabled: true
+  image:
+    repository: ghcr.io/onedr0p/exportarr
+    tag: "v2.0"
+  env:
+    PORT: "9707"
+    URL: "http://localhost:6767"
+    # API key should be configured after Bazarr is running
+    APIKEY: ""
+
+# Security context for NFS compatibility
+pod:
+  securityContext:
+    fsGroup: 1000  # Should match your NFS export user/group
+    fsGroupChangePolicy: "OnRootMismatch"
+
+# Service account
+serviceAccount:
+  create: true
+
+---
+# Example of manually created shared NFS PVs (optional)
+# You can create these separately and reference them via existingClaim
+# This approach is ideal when multiple applications share the same media
+#
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shared-media-nfs
+# spec:
+#   capacity:
+#     storage: 15Ti
+#   accessModes:
+#     - ReadWriteMany
+#   nfs:
+#     server: 192.168.1.100
+#     path: /volume1/media
+#   mountOptions:
+#     - nfsvers=4.1
+#     - hard
+#     - intr
+#     - rsize=1048576
+#     - wsize=1048576
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: ""
+# 
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: shared-media-nfs
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 15Ti
+#   volumeName: shared-media-nfs
+#   storageClassName: ""
+
+# Notes for Bazarr NFS Setup:
+# 
+# 1. Subtitle File Permissions:
+#    Bazarr needs write access to media directories to save subtitle files
+#    Ensure NFS exports allow writing: no_root_squash, rw permissions
+#
+# 2. Shared Media Approach:
+#    Consider using the same NFS shares as Sonarr/Radarr via existingClaim
+#    This ensures subtitles are saved alongside the media files
+#
+# 3. Directory Structure:
+#    Maintain consistent paths across Sonarr, Radarr, and Bazarr:
+#    /tv, /movies, /anime should match other applications
+#
+# 4. Performance Considerations:
+#    Bazarr mostly reads media files to analyze for subtitles
+#    Write operations are minimal (just subtitle files)
+#    Standard NFS performance settings work well

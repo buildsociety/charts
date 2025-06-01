@@ -1,0 +1,184 @@
+# SABnzbd with Private Internet Access VPN
+# This example shows SABnzbd configured with PIA VPN through Gluetun sidecar
+
+sabnzbd:
+  # Environment configuration
+  env:
+    TZ: "Europe/London"
+    PUID: 1000
+    PGID: 1000
+    HOST: "0.0.0.0"
+    PORT: "8080"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Storage configuration optimized for VPN usage
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "fast-ssd"
+    
+    downloads:
+      enabled: true
+      size: 2Ti
+      storageClass: "bulk-storage"
+    
+    incomplete:
+      enabled: true
+      size: 500Gi
+      storageClass: "fast-ssd"
+    
+    tv:
+      enabled: true
+      size: 1Ti
+      storageClass: "bulk-storage"
+    
+    anime:
+      enabled: true
+      size: 500Gi
+      storageClass: "bulk-storage"
+    
+    data:
+      enabled: true
+      size: 200Gi
+      storageClass: "fast-ssd"
+
+  # Resources for VPN + SABnzbd
+  resources:
+    limits:
+      cpu: 3000m
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  # Health checks
+  healthcheck:
+    enabled: true
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "SABnzbd"
+    description: "Usenet Download Client (VPN)"
+    widget:
+      type: "sabnzbd"
+      url: "http://sabnzbd:8080"
+      # key: "your-api-key-here"
+
+# Gluetun VPN Configuration for Private Internet Access
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsUser: 0
+    runAsGroup: 0
+
+  # VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # Store these credentials in a Kubernetes secret for security
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "UK London"
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: "fast-ssd"
+
+  # Resources for VPN container
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: "OnRootMismatch"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policies for *arr application access
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow Sonarr access
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow Radarr access
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: radarr
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow Lidarr access
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lidarr
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow Readarr access
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: readarr
+      ports:
+        - protocol: TCP
+          port: 8080
+
+# Monitoring
+serviceMonitor:
+  enabled: false
+  # Enable if you have Prometheus operator
+  # enabled: true
+  # interval: "30s"
+
+# Notes:
+# 1. Replace 'your-pia-username' and 'your-pia-password' with actual PIA credentials
+# 2. Consider storing VPN credentials in a Kubernetes secret instead of values file
+# 3. Adjust storage classes based on your cluster configuration
+# 4. Update server regions based on your preferred PIA location
+# 5. Configure firewall subnets to match your network setup

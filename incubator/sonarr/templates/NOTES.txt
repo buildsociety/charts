@@ -1,0 +1,109 @@
+1. Get the application URL by running these commands:
+{{- if .Values.sonarr.ingress.enabled }}
+{{- range $host := .Values.sonarr.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.sonarr.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.sonarr.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "sonarr.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.sonarr.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "sonarr.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "sonarr.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.sonarr.service.port }}
+{{- else if contains "ClusterIP" .Values.sonarr.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{- include "sonarr.selectorLabels" . | nindent 4 }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Configuration:
+   - Default username: admin (if first time setup)
+   - Web interface port: {{ .Values.sonarr.service.port }}
+   
+{{- if .Values.gluetun.enabled }}
+
+3. VPN Configuration (Gluetun):
+   - VPN is ENABLED and running as a sidecar container
+   - All Sonarr traffic will route through the VPN
+   {{- if .Values.gluetun.vpn.pia.enabled }}
+   - Using Private Internet Access (PIA)
+   - Server regions: {{ .Values.gluetun.vpn.pia.serverRegions }}
+   {{- else if .Values.gluetun.vpn.nordvpn.enabled }}
+   - Using NordVPN with WireGuard
+   {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+   - Using Mullvad with WireGuard
+   - Server cities: {{ .Values.gluetun.vpn.mullvad.serverCities }}
+   {{- end }}
+   
+   VPN Control Interface:
+   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:{{ .Values.gluetun.ports.control }}
+   # Then visit http://127.0.0.1:8000
+   
+   HTTP Proxy (if enabled):
+   - Port: {{ .Values.gluetun.ports.httpProxy }}
+   
+   To check VPN status:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c gluetun
+
+{{- else }}
+
+3. VPN Configuration:
+   - VPN is DISABLED
+   - Sonarr will connect directly to the internet
+   - Consider enabling Gluetun for privacy and security
+
+{{- end }}
+
+
+
+4. Storage:
+{{- if .Values.sonarr.persistence.config.enabled }}
+   - Config: {{ .Values.sonarr.persistence.config.size }} ({{ .Values.sonarr.persistence.config.mountPath }})
+{{- end }}
+{{- if .Values.sonarr.persistence.downloads.enabled }}
+   - Downloads: {{ .Values.sonarr.persistence.downloads.size }} ({{ .Values.sonarr.persistence.downloads.mountPath }})
+{{- end }}
+{{- if .Values.sonarr.persistence.tv.enabled }}
+   - TV Shows: {{ .Values.sonarr.persistence.tv.size }} ({{ .Values.sonarr.persistence.tv.mountPath }})
+{{- end }}
+{{- if .Values.sonarr.persistence.anime.enabled }}
+   - Anime: {{ .Values.sonarr.persistence.anime.size }} ({{ .Values.sonarr.persistence.anime.mountPath }})
+{{- end }}
+
+5. Security:
+   - Running as UID/GID: {{ .Values.sonarr.env.PUID }}/{{ .Values.sonarr.env.PGID }}
+   - Timezone: {{ .Values.sonarr.env.TZ }}
+   
+6. Troubleshooting:
+   
+   View logs:
+   kubectl --namespace {{ .Release.Namespace }} logs $POD_NAME -c sonarr
+   
+   Get shell access:
+   kubectl --namespace {{ .Release.Namespace }} exec -it $POD_NAME -c sonarr -- /bin/bash
+   
+   Check all containers in pod:
+   kubectl --namespace {{ .Release.Namespace }} describe pod $POD_NAME
+
+{{- if .Values.sonarr.homepage.enabled }}
+
+7. Homepage Integration:
+   - Labels configured for homepage dashboard integration
+   - Group: {{ .Values.sonarr.homepage.group }}
+   - Widget type: {{ .Values.sonarr.homepage.widget.type }}
+{{- if .Values.sonarr.homepage.widget.key }}
+   - API key configured for widget
+{{- else }}
+   - Remember to set homepage.widget.key in values.yaml for full widget functionality
+{{- end }}
+
+{{- end }}
+
+For more information, visit:
+- Sonarr documentation: https://wiki.servarr.com/sonarr
+- Chart repository: https://github.com/your-repo/charts

@@ -1,0 +1,190 @@
+# Ingress Overseerr Configuration
+# This example shows Overseerr configured with external access via ingress
+
+overseerr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+    LOG_LEVEL: "info"
+    PORT: "5055"
+
+  # Higher resource configuration for external access
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+      
+    logs:
+      enabled: true
+      size: 2Gi
+      storageClass: ""
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5055
+    targetPort: 5055
+
+  # Application settings for reverse proxy
+  settings:
+    baseUrl: ""
+    trustProxy: true
+    apiRateLimit: true
+    apiRateLimitMax: 200
+    apiRateLimitWindow: 10
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  # Ingress configuration for external access
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: overseerr-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - Overseerr"
+    hosts:
+      - host: overseerr.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: overseerr-tls
+        hosts:
+          - overseerr.example.com
+
+  # Homepage integration with external URL
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Overseerr"
+    description: "Request Manager (External)"
+    widget:
+      type: "overseerr"
+      url: "https://overseerr.example.com"
+      key: "your-api-key-here"
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  # Node placement for external access
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+  
+  annotations:
+    description: "Overseerr with external access via ingress"
+    external.access: "enabled"
+
+# Service account
+serviceAccount:
+  create: true
+  annotations:
+    description: "Overseerr external access service account"
+
+# Network policy for controlled external access
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow ingress controller access
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5055
+    # Allow internal cluster access
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5055
+  egress:
+    # Allow external API calls (TMDb, etc.)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Allow connection to Plex and *arr services
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: media
+      ports:
+        - protocol: TCP
+          port: 32400  # Plex
+        - protocol: TCP
+          port: 8989   # Sonarr
+        - protocol: TCP
+          port: 7878   # Radarr
+        - protocol: TCP
+          port: 8686   # Lidarr
+
+# Monitoring for external access
+serviceMonitor:
+  enabled: true
+  labels:
+    app: overseerr
+    release: prometheus
+  annotations:
+    description: "Overseerr external access monitoring"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/api/v1/status"
+
+# HPA for variable load from external users
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# PDB for availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Global settings
+global:
+  timezone: "Europe/London"

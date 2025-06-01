@@ -1,0 +1,154 @@
+# Internal-Only Gluetun Configuration
+# This example shows Gluetun configured for cluster-internal use only
+# Perfect for providing VPN proxy services to other applications within the cluster
+
+gluetun:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    TZ: "America/New_York"
+    LOG_LEVEL: "info"
+    HTTPPROXY: "on"
+    HTTPPROXY_LISTENING_ADDRESS: ":8888"
+    SHADOWSOCKS: "on"
+    SHADOWSOCKS_LISTENING_ADDRESS: ":8388"
+    SOCKSPROXY: "on"
+    SOCKSPROXY_LISTENING_ADDRESS: ":1080"
+    CONTROL_SERVER_LISTENING_ADDRESS: ":8000"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+    HEALTH_TARGET_ADDRESS: "cloudflare.com:443"
+
+  # Resource configuration for internal use
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+  # Service configuration - Internal only
+  service:
+    internal:
+      enabled: true
+      type: ClusterIP
+      annotations:
+        description: "Internal VPN proxy services for cluster applications"
+      
+    # External service disabled for internal-only use
+    external:
+      enabled: false
+
+  # VPN Provider - Private Internet Access
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # IMPORTANT: Set these values for your deployment
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "US East"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+    expressvpn:
+      enabled: false
+    surfshark:
+      enabled: false
+    custom:
+      enabled: false
+
+  # Persistence for configuration
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  # Health checks enabled
+  healthCheck:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Network"
+    name: "Gluetun VPN"
+    description: "Internal VPN Gateway"
+    widget:
+      type: "gluetun"
+      url: "http://gluetun:8000"
+
+  # Ingress disabled for internal use
+  ingress:
+    enabled: false
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  annotations:
+    description: "Internal VPN proxy gateway for cluster applications"
+    usage: "http_proxy=http://gluetun:8888 https_proxy=http://gluetun:8888"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policy for internal access
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow all internal cluster traffic to proxy services
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8888  # HTTP proxy
+        - protocol: TCP
+          port: 1080  # SOCKS5 proxy
+        - protocol: TCP
+          port: 8388  # Shadowsocks TCP
+        - protocol: UDP
+          port: 8388  # Shadowsocks UDP
+        - protocol: TCP
+          port: 8000  # Control API
+  egress:
+    # Allow VPN traffic and DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 1194
+        - protocol: UDP
+          port: 1194
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
+# Monitoring disabled for basic setup
+serviceMonitor:
+  enabled: false
+
+# HPA disabled for single instance
+hpa:
+  enabled: false
+
+# PDB disabled for single instance
+podDisruptionBudget:
+  enabled: false
+
+# Global settings
+global:
+  timezone: "America/New_York"

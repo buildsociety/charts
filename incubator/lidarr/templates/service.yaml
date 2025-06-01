@@ -1,0 +1,26 @@
+{{/*
+Service template for Lidarr
+Creates a Kubernetes Service resource that exposes the Lidarr application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lidarr.fullname" . }}
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.lidarr.service.type }}
+  ports:
+    - port: {{ .Values.lidarr.service.port }}
+      targetPort: {{ .Values.lidarr.service.targetPort }}
+      protocol: TCP
+      name: http
+    {{- if .Values.exportarr.enabled }}
+    - port: {{ .Values.exportarr.service.port }}
+      targetPort: {{ .Values.exportarr.env.PORT }}
+      protocol: TCP
+      name: {{ .Values.exportarr.service.name }}
+    {{- end }}
+  selector:
+    {{- include "lidarr.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,72 @@
+# Basic Lidarr Configuration
+# This example shows a simple Lidarr setup without VPN
+
+lidarr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+    UMASK_SET: "022"
+
+  # Resource configuration for small to medium libraries
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+      # storageClass: "default"
+      
+    downloads:
+      enabled: true
+      size: 100Gi
+      # storageClass: "default"
+      
+    music:
+      enabled: true
+      size: 2Ti
+      # storageClass: "default"
+      
+    data:
+      enabled: true
+      size: 100Gi
+      # storageClass: "default"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8686
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Lidarr"
+    description: "Music Collection Manager"
+    widget:
+      type: "lidarr"
+      url: "http://lidarr:8686"
+      # key: "your-api-key-here"
+
+# VPN disabled for basic setup
+gluetun:
+  enabled: false
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+
+# Service account
+serviceAccount:
+  create: true

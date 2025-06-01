@@ -1,0 +1,460 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Tautulli Helm Chart Values Schema",
+  "description": "Schema for validating Tautulli Helm chart values",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "description": "Global timezone setting"
+        }
+      }
+    },
+    "tautulli": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable or disable Tautulli"
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "Tautulli image repository"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Tautulli image tag"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"],
+              "description": "Image pull policy"
+            }
+          },
+          "required": ["repository", "tag", "pullPolicy"]
+        },
+        "env": {
+          "type": "object",
+          "properties": {
+            "PUID": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Process User ID"
+            },
+            "PGID": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Process Group ID"
+            },
+            "TZ": {
+              "type": "string",
+              "description": "Timezone"
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+              "description": "Service type"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Service port"
+            },
+            "targetPort": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Target port on the pod"
+            }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable ingress"
+            },
+            "className": {
+              "type": "string",
+              "description": "Ingress class name"
+            },
+            "annotations": {
+              "type": "object",
+              "description": "Ingress annotations"
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "description": "Hostname"
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "description": "Path"
+                        },
+                        "pathType": {
+                          "type": "string",
+                          "enum": ["Exact", "Prefix", "ImplementationSpecific"],
+                          "description": "Path type"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tls": {
+              "type": "array",
+              "description": "TLS configuration"
+            }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "$ref": "#/definitions/persistenceConfig"
+            },
+            "logs": {
+              "$ref": "#/definitions/persistenceConfig"
+            }
+          }
+        },
+        "resources": {
+          "$ref": "#/definitions/resources"
+        },
+        "securityContext": {
+          "type": "object",
+          "description": "Security context"
+        },
+        "configMap": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable configMap creation"
+            },
+            "data": {
+              "type": "object",
+              "description": "Additional configuration data"
+            },
+            "scripts": {
+              "type": "object",
+              "description": "Custom scripts"
+            }
+          }
+        },
+        "homepage": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable homepage integration"
+            },
+            "group": {
+              "type": "string",
+              "description": "Homepage group"
+            },
+            "name": {
+              "type": "string",
+              "description": "Homepage name"
+            },
+            "description": {
+              "type": "string",
+              "description": "Homepage description"
+            },
+            "widget": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Homepage widget type"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Internal URL for widget API calls"
+                },
+                "key": {
+                  "type": "string",
+                  "description": "API key for widget"
+                }
+              }
+            }
+          }
+        },
+        "plex": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Plex server URL"
+            },
+            "token": {
+              "type": "string",
+              "description": "Plex server token"
+            },
+            "ssl_verify": {
+              "type": "boolean",
+              "description": "Verify SSL certificates"
+            }
+          }
+        }
+      }
+    },
+    "pod": {
+      "type": "object",
+      "properties": {
+        "restartPolicy": {
+          "type": "string",
+          "enum": ["Always", "OnFailure", "Never"],
+          "description": "Pod restart policy"
+        },
+        "securityContext": {
+          "type": "object",
+          "description": "Pod security context"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector"
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations"
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity rules"
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Pod annotations"
+        },
+        "labels": {
+          "type": "object",
+          "description": "Pod labels"
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Create service account"
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Service account annotations"
+        },
+        "name": {
+          "type": "string",
+          "description": "Service account name"
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable network policies"
+        },
+        "ingress": {
+          "type": "array",
+          "description": "Ingress rules"
+        },
+        "egress": {
+          "type": "array",
+          "description": "Egress rules"
+        }
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable PodDisruptionBudget"
+        },
+        "minAvailable": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+%$"
+            }
+          ],
+          "description": "Minimum number of pods that must be available"
+        },
+        "maxUnavailable": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+%$"
+            }
+          ],
+          "description": "Maximum number of pods that can be unavailable"
+        }
+      }
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable ServiceMonitor for Prometheus"
+        },
+        "labels": {
+          "type": "object",
+          "description": "ServiceMonitor labels"
+        },
+        "annotations": {
+          "type": "object",
+          "description": "ServiceMonitor annotations"
+        },
+        "interval": {
+          "type": "string",
+          "pattern": "^[0-9]+[smh]$",
+          "description": "Scrape interval"
+        },
+        "scrapeTimeout": {
+          "type": "string",
+          "pattern": "^[0-9]+[smh]$",
+          "description": "Scrape timeout"
+        },
+        "path": {
+          "type": "string",
+          "description": "Metrics path"
+        },
+        "params": {
+          "type": "object",
+          "description": "Additional scrape parameters"
+        },
+        "basicAuth": {
+          "type": "object",
+          "description": "Basic auth configuration"
+        },
+        "bearerTokenSecret": {
+          "type": "object",
+          "description": "Bearer token secret"
+        },
+        "tlsConfig": {
+          "type": "object",
+          "description": "TLS configuration"
+        },
+        "relabelings": {
+          "type": "array",
+          "description": "Relabeling configs"
+        },
+        "metricRelabelings": {
+          "type": "array",
+          "description": "Metric relabeling configs"
+        },
+        "namespaceSelector": {
+          "type": "object",
+          "description": "Namespace selector"
+        },
+        "targetLabels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Target labels"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "persistenceConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable persistence"
+        },
+        "storageClass": {
+          "type": "string",
+          "description": "Storage class"
+        },
+        "accessMode": {
+          "type": "string",
+          "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"],
+          "description": "Access mode"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+[KMGT]i?$",
+          "description": "Volume size"
+        },
+        "mountPath": {
+          "type": "string",
+          "description": "Mount path"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "pattern": "^[0-9]+m?$",
+              "description": "CPU limit"
+            },
+            "memory": {
+              "type": "string",
+              "pattern": "^[0-9]+[KMGT]i?$",
+              "description": "Memory limit"
+            }
+          }
+        },
+        "requests": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "pattern": "^[0-9]+m?$",
+              "description": "CPU request"
+            },
+            "memory": {
+              "type": "string",
+              "pattern": "^[0-9]+[KMGT]i?$",
+              "description": "Memory request"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,126 @@
+# Default values for pocket-id.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  # -- PocketID image repository
+  repository: ghcr.io/pocket-id/pocket-id
+  # -- PocketID image tag
+  tag: latest
+  # -- Image pull policy
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use
+  name: ""
+
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 1411
+
+# -- Environment variables for PocketID
+env: []
+  # - name: ADMIN_USERNAME
+  #   value: "admin"
+  # - name: ADMIN_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: pocket-id-secrets
+  #       key: admin-password
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+  host: pocketauth.almultitonedevelopment.com
+  paths:
+    - path: /
+      pathType: ImplementationSpecific
+      
+  tls:
+    enabled: true
+    secretName: pocket-id-tls
+
+storage:
+  storageClassName: gp2
+  size: 2Gi
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podDisruptionBudget:
+  enabled: false
+  # minAvailable: 1
+  maxUnavailable: 1
+
+# Health check configuration
+healthCheck:
+  livenessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 90
+    timeoutSeconds: 5
+    failureThreshold: 2
+  readinessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Network Policy configuration
+networkPolicy:
+  enabled: false
+  # Namespace where your ingress controller is deployed
+  ingressControllerNamespace: ingress-nginx
+  ingress:
+    # Custom ingress rules (leave empty to use defaults)
+    from: []

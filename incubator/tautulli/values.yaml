@@ -1,0 +1,210 @@
+# Default values for tautulli
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # -- Set the global timezone
+  timezone: "Europe/London"
+
+# Tautulli configuration
+tautulli:
+  # -- Enable or disable Tautulli
+  enabled: true
+  
+  image:
+    # -- Tautulli image repository
+    repository: lscr.io/linuxserver/tautulli
+    # -- Tautulli image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Environment variables for Tautulli
+  env:
+    # -- Process User ID
+    PUID: 1000
+    # -- Process Group ID  
+    PGID: 1000
+    # -- Timezone
+    TZ: "Europe/London"
+
+  # Service configuration
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- Service port
+    port: 8181
+    # -- Target port on the pod
+    targetPort: 8181
+
+  # Ingress configuration
+  ingress:
+    # -- Enable ingress
+    enabled: false
+    # -- Ingress class name
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # -- Ingress hosts configuration
+    hosts:
+      - host: tautulli.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- TLS configuration
+    tls: []
+
+  # Persistence configuration
+  persistence:
+    # Configuration persistence
+    config:
+      # -- Enable config persistence
+      enabled: true
+      # -- Storage class for config volume
+      storageClass: ""
+      # -- Access mode for config volume
+      accessMode: ReadWriteOnce
+      # -- Size of config volume
+      size: 2Gi
+      # -- Mount path for config
+      mountPath: /config
+
+    # Logs persistence (optional)
+    logs:
+      # -- Enable logs persistence
+      enabled: false
+      # -- Storage class for logs volume
+      storageClass: ""
+      # -- Access mode for logs volume
+      accessMode: ReadWriteOnce
+      # -- Size of logs volume
+      size: 5Gi
+      # -- Mount path for logs
+      mountPath: /logs
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  # ConfigMap for additional configuration
+  configMap:
+    # -- Enable configMap creation
+    enabled: false
+    # -- Additional configuration data
+    data: {}
+    # -- Custom scripts
+    scripts: {}
+
+  # Homepage integration labels
+  homepage:
+    # -- Enable homepage integration
+    enabled: true
+    # -- Homepage group
+    group: "Media"
+    # -- Homepage name
+    name: "Tautulli"
+    # -- Homepage description
+    description: "Plex Analytics"
+    # -- Homepage widget type
+    widget:
+      type: "tautulli"
+      # -- Internal URL for widget API calls
+      url: "http://tautulli:8181"
+      # -- API key for widget (set this in your deployment)
+      key: ""
+
+  # Plex server configuration
+  plex:
+    # -- Plex server URL (internal cluster URL preferred)
+    url: "http://plex:32400"
+    # -- Plex server token (optional, can be configured in UI)
+    token: ""
+    # -- Verify SSL certificates
+    ssl_verify: true
+
+# Pod-level configuration  
+pod:
+  # -- Pod restart policy
+  restartPolicy: Always
+  # -- Pod security context
+  securityContext:
+    fsGroup: 1000
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  annotations: {}
+  # -- Pod labels
+  labels: {}
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# Network policies
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules
+  ingress: []
+  # -- Egress rules  
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+  # -- Maximum number of pods that can be unavailable
+  maxUnavailable: ""
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  # -- Enable ServiceMonitor for Prometheus
+  enabled: false
+  # -- ServiceMonitor labels
+  labels: {}
+  # -- ServiceMonitor annotations
+  annotations: {}
+  # -- Scrape interval
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Metrics path
+  path: "/metrics"
+  # -- Additional scrape parameters
+  params: {}
+  # -- Basic auth configuration
+  basicAuth: {}
+  # -- Bearer token secret
+  bearerTokenSecret: {}
+  # -- TLS configuration
+  tlsConfig: {}
+  # -- Relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs
+  metricRelabelings: []
+  # -- Namespace selector
+  namespaceSelector: {}
+  # -- Target labels
+  targetLabels: []

@@ -1,0 +1,26 @@
+{{/*
+Service template for Readarr
+Creates a Kubernetes Service resource that exposes the Readarr application pods,
+defining network access and load balancing for the application.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "readarr.fullname" . }}
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.readarr.service.type }}
+  ports:
+    - port: {{ .Values.readarr.service.port }}
+      targetPort: {{ .Values.readarr.service.targetPort }}
+      protocol: TCP
+      name: http
+    {{- if .Values.exportarr.enabled }}
+    - port: {{ .Values.exportarr.service.port }}
+      targetPort: {{ .Values.exportarr.env.PORT }}
+      protocol: TCP
+      name: {{ .Values.exportarr.service.name }}
+    {{- end }}
+  selector:
+    {{- include "readarr.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,40 @@
+{{/*
+PersistentVolumeClaim template for Overseerr
+Creates Kubernetes PersistentVolumeClaim resources for data persistence,
+defining storage requirements and access modes for configuration and data storage.
+*/}}
+{{- if .Values.overseerr.persistence.config.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "overseerr.fullname" . }}-config
+  labels:
+    {{- include "overseerr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.overseerr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.overseerr.persistence.config.size }}
+  {{- if .Values.overseerr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.overseerr.persistence.config.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.overseerr.persistence.logs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "overseerr.fullname" . }}-logs
+  labels:
+    {{- include "overseerr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.overseerr.persistence.logs.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.overseerr.persistence.logs.size }}
+  {{- if .Values.overseerr.persistence.logs.storageClass }}
+  storageClassName: {{ .Values.overseerr.persistence.logs.storageClass }}
+  {{- end }}
+{{- end }}
