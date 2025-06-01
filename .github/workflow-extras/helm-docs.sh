@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+
 HELM_DOCS_VERSION="1.11.3"
 
 # Function to install helm-docs

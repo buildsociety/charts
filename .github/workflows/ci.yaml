@@ -12,6 +12,7 @@ env:
   KUBECONFORM_VERSION: "0.6.4"
   HELM_DOCS_VERSION: "1.11.3"
 
+
 jobs:
   lint-chart:
     runs-on: ubuntu-latest

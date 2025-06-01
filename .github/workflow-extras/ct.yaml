@@ -13,3 +13,4 @@ debug: true
 upgrade: true
 helm-extra-set-args: "--set=replicaCount=1"
 excluded-charts: []
+
