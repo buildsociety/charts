@@ -2,6 +2,7 @@ remote: origin
 target-branch: main
 chart-dirs:
   - stable
+  - incubator
 chart-repos:
   - bitnami=https://charts.bitnami.com/bitnami
   - stable=https://charts.helm.sh/stable
@@ -13,4 +14,4 @@ debug: true
 upgrade: true
 helm-extra-set-args: "--set=replicaCount=1"
 excluded-charts: []
-
+exclude-deprecated: true
