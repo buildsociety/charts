@@ -42,7 +42,7 @@ spec:
     {{- end }}
   egress:
     # Allow DNS resolution
-    - to: []
+    - to: [{}]
       ports:
         - protocol: UDP
           port: 53
