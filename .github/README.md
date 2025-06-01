@@ -33,7 +33,7 @@ Our GitHub Actions setup provides:
 
 ### 2. Release Pipeline (`workflows/release.yaml`)
 
-**Triggers**: Push to `master` branch with changes in `stable/**`
+**Triggers**: Push to `main` branch with changes in `stable/**`
 
 **What it does**:
 - Creates GitHub releases for updated charts

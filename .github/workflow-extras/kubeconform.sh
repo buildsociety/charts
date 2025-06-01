@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CHART_DIRS="$(git diff --find-renames --name-only "$(git rev-parse --abbrev-ref HEAD)" remotes/origin/master -- stable | grep '[cC]hart.yaml' | sed -e 's#/[Cc]hart.yaml##g')"
+CHART_DIRS="$(git diff --find-renames --name-only "$(git rev-parse --abbrev-ref HEAD)" remotes/origin/main -- stable | grep '[cC]hart.yaml' | sed -e 's#/[Cc]hart.yaml##g')"
 KUBECONFORM_VERSION="${KUBECONFORM_VERSION:-0.6.4}"
 KUBERNETES_VERSION="${KUBERNETES_VERSION:-1.28.0}"
 
