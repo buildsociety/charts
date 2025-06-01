@@ -42,7 +42,7 @@ check_dependencies() {
     print_header "Checking Dependencies"
     
     # Check if running in charts directory
-    if [[ ! -d "stable" ]]; then
+    if [[ ! -d "charts" ]]; then
         print_error "Please run this script from the charts repository root"
         exit 1
     fi
@@ -139,7 +139,7 @@ lint_charts() {
     print_header "Chart Linting"
     
     local failed=false
-    find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+    find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
         print_info "Linting $chart_dir"
         if helm lint "$chart_dir" --strict; then
             print_success "$chart_dir passed linting"
@@ -158,7 +158,7 @@ generate_docs() {
     print_header "Generating Documentation"
     
     if [[ -x "./helm-docs" ]]; then
-        ./helm-docs --chart-search-root=stable --log-level=info
+        ./helm-docs --chart-search-root=charts --log-level=info
         
         if git diff --quiet; then
             print_success "Documentation is up to date"
@@ -180,7 +180,7 @@ validate_manifests() {
     fi
     
     local failed=false
-    find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+    find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
         print_info "Validating manifests for $chart_dir"
         if helm template "$chart_dir" | ./kubeconform \
             -strict \
@@ -205,7 +205,7 @@ security_scan() {
     print_header "Security Scanning"
     
     if command -v trivy &> /dev/null; then
-        trivy config stable/ --format table
+        trivy config charts/ --format table
         print_success "Security scan completed"
     else
         print_warning "Trivy not found, skipping security scan"
@@ -232,7 +232,7 @@ template_charts() {
     print_header "Templating Charts"
     
     local failed=false
-    find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+    find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
         print_info "Templating $chart_dir"
         if helm template test "$chart_dir" > /dev/null; then
             print_success "$chart_dir templating successful"
@@ -250,7 +250,7 @@ template_charts() {
 check_versions() {
     print_header "Checking Version Consistency"
     
-    find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+    find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
         local chart_version
         local app_version
         chart_version=$(grep "^version:" "$chart_dir/Chart.yaml" | cut -d' ' -f2)
@@ -272,7 +272,7 @@ check_versions() {
 update_dependencies() {
     print_header "Updating Dependencies"
     
-    find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+    find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
         if [[ -f "$chart_dir/Chart.yaml" ]] && grep -q "^dependencies:" "$chart_dir/Chart.yaml"; then
             print_info "Updating dependencies for $chart_dir"
             helm dependency update "$chart_dir"

@@ -3,8 +3,12 @@ name: Code Quality
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "charts/**"
   push:
     branches: [main]
+    paths:
+      - "charts/**"
   workflow_dispatch:
 
 env:
@@ -17,15 +21,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: Validate Chart schemas
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Check for changed charts
+        id: list-changed
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          changed=$(ct list-changed --config .github/workflow-extras/ct.yaml)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changed charts: $changed"
+          fi
+
+      - name: Validate Chart schemas
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             echo "Validating schema for $chart_dir"
             helm lint "$chart_dir" --strict
           done
@@ -40,7 +59,7 @@ jobs:
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: stable/
+          directory: charts/
           framework: kubernetes
           output_format: sarif
           output_file_path: checkov-results.sarif
@@ -93,7 +112,7 @@ jobs:
 
       - name: Check for license files
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             if [[ ! -f "$chart_dir/LICENSE" && ! -f "$chart_dir/LICENSE.txt" ]]; then
               echo "Warning: No LICENSE file found in $chart_dir"
             else
@@ -110,7 +129,7 @@ jobs:
 
       - name: Check README files
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             if [[ ! -f "$chart_dir/README.md" ]]; then
               echo "❌ No README.md found in $chart_dir"
               exit 1
@@ -121,7 +140,7 @@ jobs:
 
       - name: Check values documentation
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             if [[ ! -f "$chart_dir/values.yaml" ]]; then
               echo "❌ No values.yaml found in $chart_dir"
               exit 1
@@ -144,7 +163,7 @@ jobs:
 
       - name: Check version consistency
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             chart_version=$(grep "^version:" "$chart_dir/Chart.yaml" | cut -d' ' -f2)
             app_version=$(grep "^appVersion:" "$chart_dir/Chart.yaml" | cut -d' ' -f2 | tr -d '"')
             
@@ -170,7 +189,7 @@ jobs:
 
       - name: Analyze chart complexity
         run: |
-          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+          find charts -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
             echo "Analyzing complexity for $chart_dir"
             
             # Count template files
