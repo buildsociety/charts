@@ -1,0 +1,11 @@
+owner: buildsociety
+git-repo: charts
+charts-dir: stable
+release-name-template: "{{ .Name }}-{{ .Version }}"
+generate-release-notes: true
+make-release-latest: true
+packages-with-index: true
+push-to-registry: true
+registry: ghcr.io
+skip-existing: true
+mark-as-latest: true

@@ -1,0 +1,215 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+env:
+  HELM_VERSION: "3.13.2"
+  YAMLLINT_VERSION: "1.32.0"
+
+jobs:
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install yamllint
+        run: pip install yamllint==${{ env.YAMLLINT_VERSION }}
+
+      - name: Lint YAML files
+        run: |
+          find . -type f \( -name "*.yaml" -o -name "*.yml" \) -not -path "./.git/*" | xargs yamllint -c .yamllint.yaml
+
+  chart-schema-validation:
+    name: Chart Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Validate Chart schemas
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            echo "Validating schema for $chart_dir"
+            helm lint "$chart_dir" --strict
+          done
+
+  security-best-practices:
+    name: Security Best Practices
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: stable/
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+  chart-testing-dry-run:
+    name: Chart Testing (Dry Run)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add stable https://charts.helm.sh/stable
+          helm repo update
+
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config .github/workflow-extras/ct.yaml)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Template charts
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          ct template --config .github/workflow-extras/ct.yaml
+
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for license files
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            if [[ ! -f "$chart_dir/LICENSE" && ! -f "$chart_dir/LICENSE.txt" ]]; then
+              echo "Warning: No LICENSE file found in $chart_dir"
+            else
+              echo "✅ License file found in $chart_dir"
+            fi
+          done
+
+  documentation-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check README files
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            if [[ ! -f "$chart_dir/README.md" ]]; then
+              echo "❌ No README.md found in $chart_dir"
+              exit 1
+            else
+              echo "✅ README.md found in $chart_dir"
+            fi
+          done
+
+      - name: Check values documentation
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            if [[ ! -f "$chart_dir/values.yaml" ]]; then
+              echo "❌ No values.yaml found in $chart_dir"
+              exit 1
+            else
+              # Check if values.yaml has comments
+              if grep -q "^#" "$chart_dir/values.yaml"; then
+                echo "✅ values.yaml has documentation in $chart_dir"
+              else
+                echo "⚠️  values.yaml lacks documentation in $chart_dir"
+              fi
+            fi
+          done
+
+  version-consistency:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check version consistency
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            chart_version=$(grep "^version:" "$chart_dir/Chart.yaml" | cut -d' ' -f2)
+            app_version=$(grep "^appVersion:" "$chart_dir/Chart.yaml" | cut -d' ' -f2 | tr -d '"')
+            
+            echo "Chart: $chart_dir"
+            echo "  Chart version: $chart_version"
+            echo "  App version: $app_version"
+            
+            # Check if versions follow semantic versioning
+            if [[ ! $chart_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Chart version $chart_version in $chart_dir doesn't follow semantic versioning"
+              exit 1
+            fi
+            
+            echo "✅ Version format valid for $chart_dir"
+          done
+
+  chart-complexity:
+    name: Chart Complexity Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Analyze chart complexity
+        run: |
+          find stable -name "Chart.yaml" -exec dirname {} \; | while read -r chart_dir; do
+            echo "Analyzing complexity for $chart_dir"
+            
+            # Count template files
+            template_count=$(find "$chart_dir/templates" -name "*.yaml" -o -name "*.yml" 2>/dev/null | wc -l)
+            
+            # Count values parameters
+            values_count=$(grep -c "^[a-zA-Z]" "$chart_dir/values.yaml" 2>/dev/null || echo 0)
+            
+            echo "  Templates: $template_count"
+            echo "  Values parameters: $values_count"
+            
+            if [[ $template_count -gt 20 ]]; then
+              echo "⚠️  High template count ($template_count) in $chart_dir - consider splitting"
+            fi
+            
+            if [[ $values_count -gt 100 ]]; then
+              echo "⚠️  High values count ($values_count) in $chart_dir - consider grouping"
+            fi
+          done
