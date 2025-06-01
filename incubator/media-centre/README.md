@@ -18,86 +18,235 @@ This umbrella chart installs and configures the following applications:
 
 Each application includes optional monitoring via Exportarr for Prometheus metrics.
 
+## Quick Overview
+
+The media centre consists of three main layers working together:
+
+```mermaid
+flowchart LR
+    subgraph "🔍 Discovery"
+        A[Prowlarr<br/>Indexer Manager]
+    end
+    
+    subgraph "📺 Management"
+        B[Sonarr<br/>TV Shows]
+        C[Radarr<br/>Movies] 
+        D[Lidarr<br/>Music]
+        E[Readarr<br/>Books]
+        F[Bazarr<br/>Subtitles]
+    end
+    
+    subgraph "⬇️ Download"
+        G[SABnzbd<br/>Usenet]
+        H[qBittorrent<br/>Torrents]
+    end
+    
+    subgraph "🔒 Security"
+        I[Gluetun<br/>VPN]
+    end
+    
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    
+    B --> G
+    B --> H
+    C --> G
+    C --> H
+    D --> G
+    D --> H
+    E --> G
+    E --> H
+    
+    I --> G
+    I --> H
+    
+    F --> B
+    F --> C
+    
+    classDef discovery fill:#e8f5e8,stroke:#4caf50
+    classDef management fill:#e3f2fd,stroke:#2196f3
+    classDef download fill:#fff3e0,stroke:#ff9800
+    classDef security fill:#ffebee,stroke:#f44336
+    
+    class A discovery
+    class B,C,D,E,F management
+    class G,H download
+    class I security
+```
+
+### How It Works
+1. **🔍 Prowlarr** finds content across multiple indexers and trackers
+2. **📺 Management apps** (*arr suite) request downloads when content is found
+3. **⬇️ Download clients** fetch content securely through VPN
+4. **🔒 Gluetun** protects all download traffic through encrypted VPN tunnel
+
+## Application Comparison
+
+Choose which applications to enable based on your media automation needs:
+
+| Application | Purpose | Essential? | Use Case | Enable When |
+|-------------|---------|------------|----------|-------------|
+| **🔒 Gluetun** | VPN protection | ⭐ **Highly Recommended** | Secure download traffic | You want privacy protection |
+| **🔍 Prowlarr** | Indexer management | ⭐ **Essential** | Central indexer configuration | Always (required for automation) |
+| **📺 Sonarr** | TV show automation | ⭐ **Core** | Automated TV series management | You watch TV shows |
+| **🎬 Radarr** | Movie automation | ⭐ **Core** | Automated movie management | You watch movies |
+| **🎵 Lidarr** | Music automation | 🔧 **Optional** | Automated music collection | You collect music/albums |
+| **📚 Readarr** | Book automation | 🔧 **Optional** | eBook/audiobook management | You read digital books |
+| **💬 Bazarr** | Subtitle management | 🔧 **Optional** | Automatic subtitle downloads | You need subtitles |
+| **📥 SABnzbd** | Usenet downloader | ⭐ **Recommended** | Fast, reliable downloads | You have Usenet access |
+| **🌊 qBittorrent** | Torrent downloader | 🔧 **Alternative** | P2P downloads | You use torrents |
+
+### Recommended Configurations
+
+**🚀 Starter Setup** (Essential only):
+```yaml
+gluetun: enabled: true      # VPN protection
+prowlarr: enabled: true    # Indexer management  
+sonarr: enabled: true      # TV shows
+radarr: enabled: true      # Movies
+sabnzbd: enabled: true     # Downloads
+qbittorrent: enabled: false
+lidarr: enabled: false
+readarr: enabled: false
+bazarr: enabled: false
+```
+
+**🎯 Complete Media Setup** (Most users):
+```yaml
+# Enable all core applications
+gluetun: enabled: true
+prowlarr: enabled: true
+sonarr: enabled: true
+radarr: enabled: true
+bazarr: enabled: true      # Automatic subtitles
+sabnzbd: enabled: true
+qbittorrent: enabled: true # Both downloaders
+lidarr: enabled: false     # Add if you manage music
+readarr: enabled: false    # Add if you read ebooks
+```
+
+**🎶 Everything Setup** (Power users):
+```yaml
+# All applications enabled
+# Perfect for comprehensive media automation
+```
+
+### Resource Planning
+
+| Setup Type | CPU Requirement | RAM Requirement | Storage Need |
+|------------|----------------|-----------------|--------------|
+| **Starter** | 1-2 cores | 4-6 GB | 1-2 TB |
+| **Complete** | 2-4 cores | 6-8 GB | 3-5 TB |
+| **Everything** | 4-6 cores | 8-12 GB | 5-10 TB |
+
 ## Architecture
 
 The following diagram shows how all components work together in the media automation stack:
 
 ```mermaid
-architecture-beta
-    group api(cloud)[External Services]
-    group vpn(cloud)[VPN Network]
-    group downloads(server)[Download Clients]
-    group management(server)[Media Management]
-    group storage(disk)[Storage Layer]
-    group monitoring(cloud)[Monitoring]
-
-    service internet(internet)[Internet]
-    service indexers(database)[Indexers & Trackers]
+flowchart TB
+    subgraph "External Services"
+        INT[Internet]
+        IDX[Indexers & Trackers]
+    end
     
-    service gluetun(server)[Gluetun VPN]
-    service prowlarr(server)[Prowlarr]
+    subgraph "VPN Network"
+        GLU[Gluetun VPN]
+    end
     
-    service sabnzbd(server)[SABnzbd]
-    service qbittorrent(server)[qBittorrent]
+    subgraph "Download Clients"
+        SAB[SABnzbd]
+        QBT[qBittorrent]
+    end
     
-    service sonarr(server)[Sonarr]
-    service radarr(server)[Radarr]
-    service lidarr(server)[Lidarr]
-    service readarr(server)[Readarr]
-    service bazarr(server)[Bazarr]
+    subgraph "Media Management"
+        PRO[Prowlarr]
+        SON[Sonarr]
+        RAD[Radarr]
+        LID[Lidarr]
+        REA[Readarr]
+        BAZ[Bazarr]
+    end
     
-    service media_storage(disk)[Media Storage]
-    service download_storage(disk)[Download Storage]
-    service config_storage(disk)[Config Storage]
+    subgraph "Storage Layer"
+        MED[Media Storage]
+        DOW[Download Storage]
+        CON[Config Storage]
+    end
     
-    service exportarr(cloud)[Exportarr]
-    service prometheus(cloud)[Prometheus]
-
-    internet:L -- R:gluetun
-    indexers:L -- R:prowlarr
-    gluetun:B -- T:sabnzbd
-    gluetun:B -- T:qbittorrent
+    subgraph "Monitoring"
+        EXP[Exportarr]
+        PRO_M[Prometheus]
+    end
     
-    prowlarr:B -- T:sonarr
-    prowlarr:B -- T:radarr
-    prowlarr:B -- T:lidarr
-    prowlarr:B -- T:readarr
+    %% External connections
+    INT --> GLU
+    IDX <--> PRO
     
-    sonarr:L -- R:sabnzbd
-    sonarr:L -- R:qbittorrent
-    radarr:L -- R:sabnzbd
-    radarr:L -- R:qbittorrent
-    lidarr:L -- R:sabnzbd
-    lidarr:L -- R:qbittorrent
-    readarr:L -- R:sabnzbd
-    readarr:L -- R:qbittorrent
+    %% VPN protection
+    GLU --> SAB
+    GLU --> QBT
     
-    bazarr:T -- B:sonarr
-    bazarr:T -- B:radarr
+    %% Indexer management
+    PRO --> SON
+    PRO --> RAD
+    PRO --> LID
+    PRO --> REA
     
-    sonarr:B -- T:media_storage
-    radarr:B -- T:media_storage
-    lidarr:B -- T:media_storage
-    readarr:B -- T:media_storage
-    bazarr:B -- T:media_storage
+    %% Download requests
+    SON --> SAB
+    SON --> QBT
+    RAD --> SAB
+    RAD --> QBT
+    LID --> SAB
+    LID --> QBT
+    REA --> SAB
+    REA --> QBT
     
-    sabnzbd:B -- T:download_storage
-    qbittorrent:B -- T:download_storage
+    %% Subtitle management
+    BAZ <--> SON
+    BAZ <--> RAD
     
-    sonarr:R -- L:config_storage
-    radarr:R -- L:config_storage
-    lidarr:R -- L:config_storage
-    readarr:R -- L:config_storage
-    prowlarr:R -- L:config_storage
-    bazarr:R -- L:config_storage
+    %% Storage connections
+    SON <--> MED
+    RAD <--> MED
+    LID <--> MED
+    REA <--> MED
+    BAZ <--> MED
     
-    exportarr:T -- B:sonarr
-    exportarr:T -- B:radarr
-    exportarr:T -- B:lidarr
-    exportarr:T -- B:readarr
-    exportarr:T -- B:prowlarr
-    exportarr:T -- B:bazarr
-    exportarr:R -- L:prometheus
+    SAB <--> DOW
+    QBT <--> DOW
+    
+    SON <--> CON
+    RAD <--> CON
+    LID <--> CON
+    REA <--> CON
+    PRO <--> CON
+    BAZ <--> CON
+    
+    %% Monitoring
+    EXP --> SON
+    EXP --> RAD
+    EXP --> LID
+    EXP --> REA
+    EXP --> PRO
+    EXP --> BAZ
+    EXP --> PRO_M
+    
+    %% Styling
+    classDef vpn fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
+    classDef download fill:#ffecb3,stroke:#ff9800,stroke-width:2px
+    classDef management fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef storage fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef monitoring fill:#fff3e0,stroke:#ff5722,stroke-width:2px
+    
+    class GLU vpn
+    class SAB,QBT download
+    class PRO,SON,RAD,LID,REA,BAZ management
+    class MED,DOW,CON storage
+    class EXP,PRO_M monitoring
 ```
 
 ### Component Relationships
@@ -180,81 +329,93 @@ The following diagram shows how VPN protection secures download traffic:
 
 ```mermaid
 flowchart TD
-    subgraph "Internet"
-        I[ISP/Internet]
-        VPN[VPN Provider]
-        IDX[Indexers/Trackers]
+    subgraph Internet["🌐 Internet"]
+        ISP[ISP/Internet]
+        VPNP[VPN Provider]
+        IDX[Indexers & Trackers]
     end
     
-    subgraph "Kubernetes Cluster"
-        subgraph "VPN Pod"
-            G[Gluetun Container]
+    subgraph Cluster["☸️ Kubernetes Cluster"]
+        subgraph VPNPod["VPN Pod"]
+            GLU[Gluetun VPN]
         end
         
-        subgraph "Download Pods"
-            S[SABnzbd Container]
-            Q[qBittorrent Container]
+        subgraph DownloadPods["Download Pods"]
+            SAB[SABnzbd]
+            QBT[qBittorrent]
         end
         
-        subgraph "Management Pods"
-            P[Prowlarr]
-            SO[Sonarr]
-            R[Radarr]
-            L[Lidarr]
-            RE[Readarr]
-            B[Bazarr]
+        subgraph ManagementPods["Management Pods"]
+            PRO[Prowlarr]
+            SON[Sonarr]
+            RAD[Radarr]
+            LID[Lidarr]
+            REA[Readarr]
+            BAZ[Bazarr]
         end
         
-        subgraph "Storage"
-            MS[Media Storage]
-            DS[Download Storage]
+        subgraph Storage["💾 Storage"]
+            MED[Media Storage]
+            DOW[Download Storage]
         end
     end
     
-    subgraph "Home Network"
-        U[User]
+    subgraph Home["🏠 Home Network"]
+        USER[User]
     end
     
     %% VPN Traffic (Encrypted)
-    I -.->|Encrypted VPN Tunnel| VPN
-    VPN -.->|Encrypted Traffic| G
-    G -->|VPN Protected| S
-    G -->|VPN Protected| Q
+    ISP -.->|🔒 Encrypted VPN Tunnel| VPNP
+    VPNP -.->|🔒 Encrypted Traffic| GLU
+    GLU -->|🛡️ VPN Protected| SAB
+    GLU -->|🛡️ VPN Protected| QBT
     
     %% Direct Management Traffic
-    U -->|Direct Access| P
-    U -->|Direct Access| SO
-    U -->|Direct Access| R
+    USER -->|Direct Access| PRO
+    USER -->|Direct Access| SON
+    USER -->|Direct Access| RAD
     
-    %% Internal Communication
-    P <-->|API Calls| IDX
-    SO -->|Download Requests| S
-    SO -->|Download Requests| Q
-    R -->|Download Requests| S
-    R -->|Download Requests| Q
-    L -->|Download Requests| S
-    L -->|Download Requests| Q
-    RE -->|Download Requests| S
-    RE -->|Download Requests| Q
+    %% Indexer Communication
+    PRO <-->|API Calls| IDX
+    PRO --> SON
+    PRO --> RAD
+    PRO --> LID
+    PRO --> REA
+    
+    %% Download Requests
+    SON -->|Download Requests| SAB
+    SON -->|Download Requests| QBT
+    RAD -->|Download Requests| SAB
+    RAD -->|Download Requests| QBT
+    LID -->|Download Requests| SAB
+    LID -->|Download Requests| QBT
+    REA -->|Download Requests| SAB
+    REA -->|Download Requests| QBT
     
     %% Storage Access
-    S -->|Save Downloads| DS
-    Q -->|Save Downloads| DS
-    SO -->|Organize Media| MS
-    R -->|Organize Media| MS
-    L -->|Organize Media| MS
-    RE -->|Organize Media| MS
-    B -->|Add Subtitles| MS
+    SAB -->|Save Downloads| DOW
+    QBT -->|Save Downloads| DOW
+    SON <-->|Organize Media| MED
+    RAD <-->|Organize Media| MED
+    LID <-->|Organize Media| MED
+    REA <-->|Organize Media| MED
+    BAZ <-->|Add Subtitles| MED
+    
+    %% Subtitle Integration
+    BAZ <--> SON
+    BAZ <--> RAD
     
     %% Styling
     classDef vpnSecure fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
     classDef download fill:#ffecb3,stroke:#ff9800,stroke-width:2px
     classDef management fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
     classDef storage fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#f44336,stroke-width:2px
     
-    class G,S,Q vpnSecure
-    class P,SO,R,L,RE,B management
-    class MS,DS storage
+    class GLU,SAB,QBT vpnSecure
+    class PRO,SON,RAD,LID,REA,BAZ management
+    class MED,DOW storage
+    class ISP,VPNP,IDX external
 ```
 
 #### Security Benefits
@@ -495,34 +656,275 @@ Consider implementing network policies to:
 - Restrict management application access
 - Control inter-application communication
 
+## Setup Guide
+
+### Step 1: Prepare Your Environment
+
+Before installing the media centre, ensure you have:
+
+```bash
+# Verify Kubernetes cluster is ready
+kubectl cluster-info
+
+# Check available storage classes
+kubectl get storageclass
+
+# Create namespace for media centre
+kubectl create namespace media
+```
+
+### Step 2: Configure VPN (Recommended)
+
+Create a secret with your VPN credentials:
+
+```bash
+# Create VPN credentials secret
+kubectl create secret generic vpn-credentials \
+  --from-literal=username='your-vpn-username' \
+  --from-literal=password='your-vpn-password' \
+  -n media
+```
+
+Update your values file to use the secret:
+
+```yaml
+gluetun:
+  env:
+    OPENVPN_USER:
+      valueFrom:
+        secretKeyRef:
+          name: vpn-credentials
+          key: username
+    OPENVPN_PASSWORD:
+      valueFrom:
+        secretKeyRef:
+          name: vpn-credentials
+          key: password
+```
+
+### Step 3: Install the Chart
+
+```bash
+# Install with default values
+helm install media-centre ./charts/incubator/media-centre -n media
+
+# Or install with custom configuration
+helm install media-centre ./charts/incubator/media-centre -f values.yaml -n media
+```
+
+### Step 4: Access Applications
+
+```bash
+# Port forward to access applications locally
+kubectl port-forward svc/media-centre-prowlarr 9696:9696 -n media
+kubectl port-forward svc/media-centre-sonarr 8989:8989 -n media
+kubectl port-forward svc/media-centre-radarr 7878:7878 -n media
+```
+
+### Step 5: Initial Configuration
+
+1. **Configure Prowlarr** (http://localhost:9696):
+   - Add your preferred indexers
+   - Configure API keys for integration
+   - Test indexer connections
+
+2. **Setup Sonarr** (http://localhost:8989):
+   - Add Prowlarr as indexer source
+   - Configure download clients (SABnzbd/qBittorrent)
+   - Set media library paths
+   - Configure quality profiles
+
+3. **Setup Radarr** (http://localhost:7878):
+   - Add Prowlarr as indexer source
+   - Configure download clients
+   - Set movie library paths
+   - Configure quality profiles
+
+4. **Configure Download Clients**:
+   - SABnzbd: Configure your Usenet provider
+   - qBittorrent: No additional setup required
+
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Applications can't reach each other**
-   - Check service names and ports
-   - Verify network policies aren't blocking traffic
+#### 1. Pods Stuck in Pending State
 
-2. **Storage permission issues**
-   - Ensure PUID/PGID match filesystem permissions
-   - Check storage class supports required access modes
+**Problem**: Pods not starting due to storage issues
 
-3. **VPN connectivity issues**
-   - Verify VPN credentials
-   - Check Gluetun logs for connection status
-   - Ensure port forwarding is configured correctly
+```bash
+# Check pod status
+kubectl get pods -n media
+kubectl describe pod <pod-name> -n media
+```
+
+**Solutions**:
+- Verify storage class exists and supports ReadWriteMany
+- Check if persistent volume claims are bound
+- Ensure sufficient storage capacity
+
+#### 2. VPN Connection Failures
+
+**Problem**: Download clients can't connect through VPN
+
+```bash
+# Check Gluetun logs
+kubectl logs -f deployment/media-centre-gluetun -n media
+```
+
+**Solutions**:
+- Verify VPN credentials are correct
+- Check VPN provider settings
+- Ensure VPN provider supports your region
+- Try different VPN servers
+
+#### 3. Applications Can't Reach Each Other
+
+**Problem**: Sonarr/Radarr can't connect to download clients
+
+**Solutions**:
+- Use service names instead of localhost:
+  - SABnzbd: `http://media-centre-sabnzbd:8080`
+  - qBittorrent: `http://media-centre-qbittorrent:8080`
+- Check network policies aren't blocking traffic
+- Verify service ports match container ports
+
+#### 4. Storage Permission Issues
+
+**Problem**: Applications can't write to storage
+
+```bash
+# Check pod file permissions
+kubectl exec -it <pod-name> -n media -- ls -la /media
+kubectl exec -it <pod-name> -n media -- id
+```
+
+**Solutions**:
+- Ensure PUID/PGID match filesystem permissions
+- Check storage class supports required access modes
+- Verify volume mount paths are correct
+
+#### 5. Download Clients Not Working
+
+**Problem**: Downloads failing or not starting
+
+**For SABnzbd**:
+```bash
+# Check SABnzbd logs
+kubectl logs -f deployment/media-centre-sabnzbd -n media
+```
+- Verify Usenet provider configuration
+- Check server settings and SSL configuration
+- Ensure sufficient disk space
+
+**For qBittorrent**:
+```bash
+# Check qBittorrent logs
+kubectl logs -f deployment/media-centre-qbittorrent -n media
+```
+- Verify port forwarding through VPN
+- Check tracker connectivity
+- Ensure proper ratio management
+
+#### 6. Monitoring Not Working
+
+**Problem**: Exportarr metrics not available
+
+```bash
+# Check exportarr sidecar
+kubectl logs <pod-name> -c exportarr -n media
+```
+
+**Solutions**:
+- Verify API keys are configured
+- Check application URLs in exportarr config
+- Ensure applications are fully started before exportarr
 
 ### Checking Logs
 
 ```bash
-# Check application logs
-kubectl logs -f deployment/sonarr -n media
+# Check all pods status
+kubectl get pods -n media
+
+# Check specific application logs
+kubectl logs -f deployment/media-centre-sonarr -n media
+kubectl logs -f deployment/media-centre-radarr -n media
+kubectl logs -f deployment/media-centre-prowlarr -n media
 
 # Check VPN logs
-kubectl logs -f deployment/gluetun -n media
+kubectl logs -f deployment/media-centre-gluetun -n media
 
-# Check all pods in namespace
-kubectl get pods -n media
+# Check download client logs
+kubectl logs -f deployment/media-centre-sabnzbd -n media
+kubectl logs -f deployment/media-centre-qbittorrent -n media
+
+# Check events for troubleshooting
+kubectl get events -n media --sort-by='.lastTimestamp'
+```
+
+### Performance Optimization
+
+#### Resource Allocation
+
+```yaml
+# Example resource limits
+sonarr:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+radarr:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+```
+
+#### Storage Optimization
+
+```yaml
+# Use different storage classes for different purposes
+global:
+  storageClass: "fast-ssd"  # For application configs
+  media:
+    storageClass: "bulk-storage"  # For media files
+  downloads:
+    storageClass: "fast-ssd"  # For active downloads
+```
+
+### Maintenance Tasks
+
+#### Regular Backups
+
+```bash
+# Backup persistent volume claims
+kubectl get pvc -n media -o yaml > pvc-backup.yaml
+
+# Backup application configs
+kubectl exec deployment/media-centre-sonarr -n media -- tar -czf - /config > sonarr-config-backup.tar.gz
+```
+
+#### Updates and Upgrades
+
+```bash
+# Update Helm repository
+helm repo update
+
+# Check for chart updates
+helm list -n media
+
+# Upgrade chart
+helm upgrade media-centre ./charts/incubator/media-centre -f values.yaml -n media
+
+# Rollback if needed
+helm rollback media-centre 1 -n media
 ```
 
 ## Upgrading
@@ -547,6 +949,212 @@ helm repo update
 
 # Upgrade chart
 helm upgrade media-centre your-charts/media-centre -f values.yaml -n media
+```
+
+## Frequently Asked Questions
+
+### General Setup
+
+**Q: What storage requirements do I need?**
+
+A: Minimum recommended storage:
+- **Config storage**: 50GB (fast SSD recommended)
+- **Download storage**: 500GB-1TB (fast storage for active downloads)
+- **Media storage**: 2TB+ (can use slower bulk storage)
+
+**Q: Do I need a VPN?**
+
+A: Highly recommended for download clients (SABnzbd, qBittorrent) to protect privacy and avoid ISP throttling. Management applications don't require VPN as they only coordinate downloads.
+
+**Q: Which applications should I enable for a basic setup?**
+
+A: For movies and TV shows only:
+```yaml
+# Minimal setup
+prowlarr: enabled: true
+sonarr: enabled: true
+radarr: enabled: true
+sabnzbd: enabled: true
+gluetun: enabled: true
+
+# Optional/disable for basic setup
+qbittorrent: enabled: false
+lidarr: enabled: false
+readarr: enabled: false
+bazarr: enabled: false
+```
+
+### Network and Access
+
+**Q: How do I access the applications from outside my cluster?**
+
+A: Several options:
+1. **Port forwarding** (development):
+   ```bash
+   kubectl port-forward svc/media-centre-sonarr 8989:8989 -n media
+   ```
+
+2. **LoadBalancer service** (cloud):
+   ```yaml
+   sonarr:
+     service:
+       main:
+         type: LoadBalancer
+   ```
+
+3. **Ingress** (production):
+   ```yaml
+   sonarr:
+     ingress:
+       main:
+         enabled: true
+         hosts:
+           - host: sonarr.example.com
+   ```
+
+**Q: What are the default ports for each application?**
+
+A: Standard ports:
+- Prowlarr: 9696
+- Sonarr: 8989
+- Radarr: 7878
+- Lidarr: 8686
+- Readarr: 8787
+- Bazarr: 6767
+- SABnzbd: 8080
+- qBittorrent: 8080
+- Gluetun: 8000
+
+### Storage and Performance
+
+**Q: Can I use existing storage/NAS?**
+
+A: Yes, use existing PVCs:
+```yaml
+global:
+  media:
+    existingClaim: "my-nas-media-pvc"
+  downloads:
+    existingClaim: "my-nas-downloads-pvc"
+```
+
+**Q: How much CPU/RAM do I need?**
+
+A: Minimum per application:
+- **Management apps** (*arr): 100m CPU, 512MB RAM each
+- **Download clients**: 200m CPU, 1GB RAM each
+- **VPN**: 50m CPU, 128MB RAM
+- **Total minimum**: 1 CPU, 4GB RAM for basic setup
+
+**Q: How do I share media between applications?**
+
+A: The chart automatically configures shared storage. All applications mount the same media volume with different subdirectories:
+- `/tv` - Sonarr
+- `/movies` - Radarr  
+- `/music` - Lidarr
+- `/books` - Readarr
+
+### VPN and Security
+
+**Q: Which VPN providers are supported?**
+
+A: Gluetun supports many providers including:
+- NordVPN
+- ExpressVPN
+- Surfshark
+- Private Internet Access (PIA)
+- ProtonVPN
+- Mullvad
+- And many more - see [Gluetun documentation](https://github.com/qdm12/gluetun/wiki)
+
+**Q: How do I configure VPN credentials securely?**
+
+A: Use Kubernetes secrets:
+```bash
+kubectl create secret generic vpn-creds \
+  --from-literal=username='vpn-user' \
+  --from-literal=password='vpn-pass' \
+  -n media
+```
+
+Then reference in values:
+```yaml
+gluetun:
+  env:
+    OPENVPN_USER:
+      valueFrom:
+        secretKeyRef:
+          name: vpn-creds
+          key: username
+```
+
+**Q: What happens if VPN disconnects?**
+
+A: Gluetun includes a kill-switch. If VPN disconnects, download clients lose internet access, preventing unprotected traffic.
+
+### Troubleshooting
+
+**Q: Downloads aren't starting - what should I check?**
+
+A: Common issues and solutions:
+1. **Check VPN connection**: `kubectl logs deployment/media-centre-gluetun -n media`
+2. **Verify indexers**: Test in Prowlarr web interface
+3. **Check download client config**: Ensure correct URLs in *arr apps
+4. **Storage space**: Ensure sufficient space in download directory
+5. **API keys**: Verify applications can communicate with each other
+
+**Q: Applications show "connection refused" errors?**
+
+A: Use correct service names:
+- ❌ `localhost:8080` or `127.0.0.1:8080`
+- ✅ `media-centre-sabnzbd:8080`
+- ✅ `media-centre-qbittorrent:8080`
+
+**Q: How do I reset an application's configuration?**
+
+A: Delete the config PVC and restart:
+```bash
+# WARNING: This will delete all configuration!
+kubectl delete pvc media-centre-sonarr-config -n media
+kubectl delete pod -l app.kubernetes.io/name=sonarr -n media
+```
+
+### Monitoring and Maintenance
+
+**Q: How do I monitor system health?**
+
+A: Enable Exportarr for Prometheus metrics:
+```yaml
+sonarr:
+  exportarr:
+    enabled: true
+```
+
+Access metrics at: `http://app:9707/metrics`
+
+**Q: How do I backup my configuration?**
+
+A: Backup strategies:
+1. **PVC snapshots** (if supported by storage class)
+2. **Manual backup**:
+   ```bash
+   kubectl exec deployment/media-centre-sonarr -n media -- \
+     tar -czf - /config > sonarr-backup.tar.gz
+   ```
+3. **Automated backup tools** like Velero
+
+**Q: How do I update the applications?**
+
+A: Update image tags in values.yaml:
+```yaml
+sonarr:
+  image:
+    tag: "4.0.1"  # Update to newer version
+```
+
+Then upgrade:
+```bash
+helm upgrade media-centre ./charts/incubator/media-centre -f values.yaml -n media
 ```
 
 ## Uninstallation
