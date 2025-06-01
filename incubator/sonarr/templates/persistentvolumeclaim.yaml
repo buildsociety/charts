@@ -1,101 +1,65 @@
-{{- if .Values.sonarr.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.sonarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled }}
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: PersistentVolume
 metadata:
-  name: {{ include "sonarr.fullname" . }}-config
+  name: {{ include "sonarr.fullname" $ }}-{{ $volumeName }}-nfs
   labels:
-    {{- include "sonarr.labels" . | nindent 4 }}
-    component: config
+    {{- include "sonarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
 spec:
+  capacity:
+    storage: {{ $volume.size }}
   accessModes:
-    - {{ .Values.sonarr.persistence.config.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.sonarr.persistence.config.size }}
-  {{- if .Values.sonarr.persistence.config.storageClass }}
-  storageClassName: {{ .Values.sonarr.persistence.config.storageClass }}
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
   {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
 {{- end }}
 
-{{- if .Values.sonarr.persistence.downloads.enabled }}
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.sonarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "sonarr.fullname" . }}-downloads
+  name: {{ include "sonarr.fullname" $ }}-{{ $volumeName }}
   labels:
-    {{- include "sonarr.labels" . | nindent 4 }}
-    component: downloads
+    {{- include "sonarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.sonarr.persistence.downloads.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.sonarr.persistence.downloads.size }}
-  {{- if .Values.sonarr.persistence.downloads.storageClass }}
-  storageClassName: {{ .Values.sonarr.persistence.downloads.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "sonarr.fullname" $ }}-{{ $volumeName }}-nfs
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
 {{- end }}
-
-{{- if .Values.sonarr.persistence.tv.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "sonarr.fullname" . }}-tv
-  labels:
-    {{- include "sonarr.labels" . | nindent 4 }}
-    component: tv
-spec:
-  accessModes:
-    - {{ .Values.sonarr.persistence.tv.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.sonarr.persistence.tv.size }}
-  {{- if .Values.sonarr.persistence.tv.storageClass }}
-  storageClassName: {{ .Values.sonarr.persistence.tv.storageClass }}
-  {{- end }}
-{{- end }}
-
-{{- if .Values.sonarr.persistence.anime.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "sonarr.fullname" . }}-anime
-  labels:
-    {{- include "sonarr.labels" . | nindent 4 }}
-    component: anime
-spec:
-  accessModes:
-    - {{ .Values.sonarr.persistence.anime.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.sonarr.persistence.anime.size }}
-  {{- if .Values.sonarr.persistence.anime.storageClass }}
-  storageClassName: {{ .Values.sonarr.persistence.anime.storageClass }}
-  {{- end }}
-{{- end }}
-
-{{- if .Values.sonarr.persistence.data.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "sonarr.fullname" . }}-data
-  labels:
-    {{- include "sonarr.labels" . | nindent 4 }}
-    component: data
-spec:
-  accessModes:
-    - {{ .Values.sonarr.persistence.data.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.sonarr.persistence.data.size }}
-  {{- if .Values.sonarr.persistence.data.storageClass }}
-  storageClassName: {{ .Values.sonarr.persistence.data.storageClass }}
-  {{- end }}
 {{- end }}
 
 {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
@@ -106,7 +70,8 @@ metadata:
   name: {{ include "sonarr.fullname" . }}-gluetun
   labels:
     {{- include "sonarr.labels" . | nindent 4 }}
-    component: gluetun
+    app.kubernetes.io/component: gluetun
+    app.kubernetes.io/volume-type: gluetun
 spec:
   accessModes:
     - {{ .Values.gluetun.persistence.accessMode }}

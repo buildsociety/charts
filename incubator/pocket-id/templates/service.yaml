@@ -1,3 +1,8 @@
+{{/*
+Service template for Pocket ID
+Creates a Kubernetes Service resource that exposes the Pocket ID application pods,
+defining network access and load balancing for the application.
+*/}}
 apiVersion: v1
 kind: Service
 metadata:

@@ -1,3 +1,8 @@
+{{/*
+PersistentVolumeClaim template for Pocket ID
+Creates a Kubernetes PersistentVolumeClaim resource for data persistence,
+defining storage requirements and access modes for the Pocket ID application.
+*/}}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:

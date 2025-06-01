@@ -1,0 +1,19 @@
+# Recommended: Using API token instead of global API key
+cloudflareddns:
+  credentials:
+    # Create token at: https://dash.cloudflare.com/profile/api-tokens
+    # Use "Edit zone DNS" template
+    apiToken: "your-api-token-here"
+  
+  # Multiple hosts example
+  hosts: "home.example.com;office.example.com;vpn.example.com"
+  zones: "example.com;example.com;example.com"
+  recordTypes: "A;A;A"
+  
+  env:
+    # Check every 10 minutes
+    INTERVAL: "600"
+    # More verbose logging
+    LOG_LEVEL: "4"
+    # Use Cloudflare's IP detection
+    DETECTION_MODE: "dig-whoami.cloudflare"

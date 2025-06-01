@@ -1,3 +1,8 @@
+{{/*
+Deployment template for Radarr
+Creates a Kubernetes Deployment resource that manages the Radarr application pods,
+including container configuration, environment variables, volume mounts, and resource limits.
+*/}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -167,34 +172,40 @@ spec:
             - name: UMASK_SET
               value: {{ .Values.radarr.env.UMASK_SET | quote }}
           volumeMounts:
-            {{- if .Values.radarr.persistence.config.enabled }}
-            - name: config
-              mountPath: {{ .Values.radarr.persistence.config.mountPath }}
+            {{- range $volumeName, $volume := .Values.radarr.persistence }}
+            {{- if $volume.enabled }}
+            - name: {{ $volumeName }}
+              mountPath: {{ $volume.mountPath }}
             {{- end }}
-            {{- if .Values.radarr.persistence.downloads.enabled }}
-            - name: downloads
-              mountPath: {{ .Values.radarr.persistence.downloads.mountPath }}
-            {{- end }}
-            {{- if .Values.radarr.persistence.movies.enabled }}
-            - name: movies
-              mountPath: {{ .Values.radarr.persistence.movies.mountPath }}
-            {{- end }}
-            {{- if .Values.radarr.persistence.data.enabled }}
-            - name: data
-              mountPath: {{ .Values.radarr.persistence.data.mountPath }}
             {{- end }}
           livenessProbe:
-            httpGet:
-              path: /
-              port: {{ .Values.radarr.service.targetPort }}
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  response=$(wget --spider -S -T 5 http://localhost:{{ .Values.radarr.service.targetPort }}/ 2>&1)
+                  if echo "$response" | grep -E "HTTP/1.[01] [23][0-9][0-9]|HTTP/1.[01] 401|HTTP/1.[01] 403"; then
+                    exit 0
+                  else
+                    exit 1
+                  fi
             initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 5
           readinessProbe:
-            httpGet:
-              path: /
-              port: {{ .Values.radarr.service.targetPort }}
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  response=$(wget --spider -S -T 5 http://localhost:{{ .Values.radarr.service.targetPort }}/ 2>&1)
+                  if echo "$response" | grep -E "HTTP/1.[01] [23][0-9][0-9]|HTTP/1.[01] 401|HTTP/1.[01] 403"; then
+                    exit 0
+                  else
+                    exit 1
+                  fi
             initialDelaySeconds: 30
             periodSeconds: 15
             timeoutSeconds: 5
@@ -245,25 +256,12 @@ spec:
         {{- end }}
 
       volumes:
-        {{- if .Values.radarr.persistence.config.enabled }}
-        - name: config
+        {{- range $volumeName, $volume := .Values.radarr.persistence }}
+        {{- if $volume.enabled }}
+        - name: {{ $volumeName }}
           persistentVolumeClaim:
-            claimName: {{ include "radarr.fullname" . }}-config
+            claimName: {{ include "radarr.pvcName" (dict "volumeName" $volumeName "context" $) }}
         {{- end }}
-        {{- if .Values.radarr.persistence.downloads.enabled }}
-        - name: downloads
-          persistentVolumeClaim:
-            claimName: {{ include "radarr.fullname" . }}-downloads
-        {{- end }}
-        {{- if .Values.radarr.persistence.movies.enabled }}
-        - name: movies
-          persistentVolumeClaim:
-            claimName: {{ include "radarr.fullname" . }}-movies
-        {{- end }}
-        {{- if .Values.radarr.persistence.data.enabled }}
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ include "radarr.fullname" . }}-data
         {{- end }}
         {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
         - name: gluetun-data

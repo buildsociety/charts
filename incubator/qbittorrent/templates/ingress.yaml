@@ -1,3 +1,8 @@
+{{/*
+Ingress template for qBittorrent
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the qBittorrent service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.qbittorrent.ingress.enabled -}}
 {{- $fullName := include "qbittorrent.fullname" . -}}
 {{- $svcPort := .Values.qbittorrent.service.port -}}

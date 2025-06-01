@@ -1,3 +1,8 @@
+{{/*
+Ingress template for Readarr
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the Readarr service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.readarr.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

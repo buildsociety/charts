@@ -1,3 +1,8 @@
+{{/*
+Ingress template for Lidarr
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the Lidarr service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.lidarr.ingress.enabled -}}
 {{- $fullName := include "lidarr.fullname" . -}}
 {{- $svcPort := .Values.lidarr.service.port -}}

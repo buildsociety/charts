@@ -1,3 +1,8 @@
+{{/*
+Ingress template for Gluetun
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the Gluetun control interface,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.gluetun.ingress.enabled -}}
 {{- $fullName := include "gluetun.fullname" . -}}
 {{- $svcPort := .Values.gluetun.service.internal.ports.control.port -}}

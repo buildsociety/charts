@@ -13,7 +13,7 @@ sabnzbd:
   
   image:
     # -- SABnzbd image repository
-    repository: linuxserver/sabnzbd
+    repository: lscr.io/linuxserver/sabnzbd
     # -- SABnzbd image tag
     tag: "latest"
     # -- Image pull policy
@@ -79,6 +79,21 @@ sabnzbd:
       size: 2Gi
       # -- Mount path for config
       mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Downloads persistence (completed downloads)
     downloads:
@@ -89,22 +104,52 @@ sabnzbd:
       # -- Access mode for downloads volume
       accessMode: ReadWriteOnce
       # -- Size of downloads volume
-      size: 500Gi
+      size: 100Gi
       # -- Mount path for downloads
       mountPath: /downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Incomplete downloads persistence (active downloads)
     incomplete:
       # -- Enable incomplete downloads persistence
       enabled: true
-      # -- Storage class for incomplete volume
+      # -- Storage class for incomplete downloads volume
       storageClass: ""
-      # -- Access mode for incomplete volume
+      # -- Access mode for incomplete downloads volume
       accessMode: ReadWriteOnce
-      # -- Size of incomplete volume
+      # -- Size of incomplete downloads volume
       size: 100Gi
       # -- Mount path for incomplete downloads
       mountPath: /incomplete-downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for incomplete downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # TV shows persistence
     tv:

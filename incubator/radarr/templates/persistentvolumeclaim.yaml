@@ -1,99 +1,64 @@
-{{- if .Values.radarr.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.radarr.persistence }}
+{{- if include "radarr.shouldCreateNFSPV" (dict "volumeName" $volumeName "context" $) }}
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: PersistentVolume
 metadata:
-  name: {{ include "radarr.fullname" . }}-config
+  name: {{ include "radarr.pvName" (dict "volumeName" $volumeName "context" $) }}
   labels:
-    {{- include "radarr.labels" . | nindent 4 }}
-    component: config
+    {{- include "radarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
 spec:
+  capacity:
+    storage: {{ $volume.size }}
   accessModes:
-    - {{ .Values.radarr.persistence.config.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.radarr.persistence.config.size }}
-  {{- if .Values.radarr.persistence.config.storageClass }}
-  storageClassName: {{ .Values.radarr.persistence.config.storageClass }}
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
   {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
 {{- end }}
 
-{{- if .Values.radarr.persistence.downloads.enabled }}
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.radarr.persistence }}
+{{- if include "radarr.shouldCreatePVC" (dict "volumeName" $volumeName "context" $) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "radarr.fullname" . }}-downloads
+  name: {{ include "radarr.pvcName" (dict "volumeName" $volumeName "context" $) }}
   labels:
-    {{- include "radarr.labels" . | nindent 4 }}
-    component: downloads
+    {{- include "radarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.radarr.persistence.downloads.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.radarr.persistence.downloads.size }}
-  {{- if .Values.radarr.persistence.downloads.storageClass }}
-  storageClassName: {{ .Values.radarr.persistence.downloads.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "radarr.pvName" (dict "volumeName" $volumeName "context" $) }}
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
+{{- end }}
 {{- end }}
 
-{{- if .Values.radarr.persistence.movies.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "radarr.fullname" . }}-movies
-  labels:
-    {{- include "radarr.labels" . | nindent 4 }}
-    component: movies
-spec:
-  accessModes:
-    - {{ .Values.radarr.persistence.movies.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.radarr.persistence.movies.size }}
-  {{- if .Values.radarr.persistence.movies.storageClass }}
-  storageClassName: {{ .Values.radarr.persistence.movies.storageClass }}
-  {{- end }}
-{{- end }}
-
-{{- if .Values.radarr.persistence.data.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "radarr.fullname" . }}-data
-  labels:
-    {{- include "radarr.labels" . | nindent 4 }}
-    component: data
-spec:
-  accessModes:
-    - {{ .Values.radarr.persistence.data.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.radarr.persistence.data.size }}
-  {{- if .Values.radarr.persistence.data.storageClass }}
-  storageClassName: {{ .Values.radarr.persistence.data.storageClass }}
-  {{- end }}
-{{- end }}
-
-{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "radarr.fullname" . }}-gluetun
-  labels:
-    {{- include "radarr.labels" . | nindent 4 }}
-    component: gluetun
-spec:
-  accessModes:
-    - {{ .Values.gluetun.persistence.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.gluetun.persistence.size }}
-  {{- if .Values.gluetun.persistence.storageClass }}
-  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
-  {{- end }}
-{{- end }}

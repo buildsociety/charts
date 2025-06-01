@@ -1,3 +1,8 @@
+{{/*
+ServiceMonitor template for Bazarr
+Creates a Prometheus ServiceMonitor resource that configures automatic service discovery,
+enabling metrics collection and monitoring for the application.
+*/}}
 {{- if .Values.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

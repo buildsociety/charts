@@ -1,6 +1,19 @@
-apiVersion: v1
-appVersion: "latest"
-description: A Helm chart for PocketID - A simple, secure, and self-hostable auth provider
-home: https://github.com/pocket-id/pocket-id
+apiVersion: v2
 name: pocket-id
+description: A Helm chart for PocketID - A simple, secure, and self-hostable auth provider
+type: application
 version: 0.1.0
+appVersion: "latest"
+keywords:
+  - pocketid
+  - authentication
+  - auth
+  - identity
+  - sso
+home: https://github.com/pocket-id/pocket-id
+sources:
+  - https://github.com/pocket-id/pocket-id
+icon: https://raw.githubusercontent.com/pocket-id/pocket-id/main/web/public/logo192.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

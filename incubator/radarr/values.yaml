@@ -13,7 +13,7 @@ radarr:
   
   image:
     # -- Radarr image repository
-    repository: linuxserver/radarr
+    repository: lscr.io/linuxserver/radarr
     # -- Radarr image tag
     tag: "latest"
     # -- Image pull policy
@@ -70,6 +70,21 @@ radarr:
       size: 1Gi
       # -- Mount path for config
       mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Downloads persistence
     downloads:
@@ -83,6 +98,21 @@ radarr:
       size: 50Gi
       # -- Mount path for downloads
       mountPath: /downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Movies persistence
     movies:
@@ -96,6 +126,21 @@ radarr:
       size: 2Ti
       # -- Mount path for movies
       mountPath: /movies
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for movies storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Data persistence (shared with download client)
     data:
@@ -109,6 +154,21 @@ radarr:
       size: 100Gi
       # -- Mount path for data
       mountPath: /data
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for data storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
   # Resource limits and requests
   resources:

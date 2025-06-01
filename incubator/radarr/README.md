@@ -312,7 +312,71 @@ kubectl cp default/radarr-pod:/config ./radarr-config-backup
 helm upgrade radarr your-charts/radarr
 ```
 
+## NFS Setup Guide
+
+### 1. Prepare NFS Exports
+
+On your NAS/NFS server, create and configure exports:
+
+```bash
+# Example NFS exports (/etc/exports)
+/volume1/media/movies    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
+/volume1/downloads       192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
+```
+
+### 2. Set Proper Permissions
+
+Ensure the NFS exports have correct ownership:
+
+```bash
+# On NFS server
+chown -R 1000:1000 /volume1/media/movies
+chown -R 1000:1000 /volume1/downloads
+chmod -R 755 /volume1/media/movies
+chmod -R 755 /volume1/downloads
+```
+
+### 3. Configure Kubernetes Nodes
+
+Install NFS client on all Kubernetes nodes:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install nfs-common
+
+# CentOS/RHEL
+sudo yum install nfs-utils
+```
+
+### 4. Test NFS Connectivity
+
+```bash
+# Test mount from Kubernetes node
+sudo mount -t nfs4 192.168.1.100:/volume1/media/movies /mnt/test
+ls -la /mnt/test
+sudo umount /mnt/test
+```
+
 ## Troubleshooting
+
+### NFS Issues
+
+**NFS mount fails**:
+- Verify NFS exports are properly configured
+- Check firewall rules on NFS server
+- Ensure nfs-common is installed on all nodes
+- Test manual mount from nodes
+
+**Permission denied errors**:
+- Check file/directory ownership on NFS server
+- Verify no_root_squash is set in exports
+- Ensure PUID/PGID match NFS export permissions
+
+**Performance issues**:
+- Tune NFS mount options (rsize/wsize)
+- Use NFSv4.1 for better performance
+- Consider network bandwidth limitations
 
 ### Check Pod Status
 

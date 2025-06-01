@@ -478,6 +478,19 @@ helm install media-centre your-charts/media-centre --namespace media --create-na
 | `global.downloads.size` | Size of downloads storage | `500Gi` |
 | `global.network.useVPN` | Route download clients through VPN | `true` |
 
+### NFS Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `<app>.persistence.<volume>.nfs.enabled` | Enable NFS for this volume | `false` |
+| `<app>.persistence.<volume>.nfs.server` | NFS server IP address | `""` |
+| `<app>.persistence.<volume>.nfs.path` | NFS export path | `""` |
+| `<app>.persistence.<volume>.nfs.mountOptions` | NFS mount options | `[nfsvers=4.1, hard, intr]` |
+| `<app>.persistence.<volume>.existingClaim` | Use existing PVC instead of creating new | `""` |
+| `<app>.persistence.<volume>.size` | Volume size (resource request for NFS) | Varies by app |
+
+**Note**: With NFS, `size` is a Kubernetes resource request, not actual storage allocation. Actual capacity comes from your NFS export.
+
 ### VPN Configuration (Gluetun)
 
 | Parameter | Description | Default |
@@ -573,6 +586,263 @@ sabnzbd:
 
 qbittorrent:
   podAnnotations: {}
+```
+
+## NFS Setup Guide
+
+### Prerequisites for NFS
+
+Before using NFS storage, ensure you have:
+- A NAS device or NFS server (Synology, QNAP, TrueNAS, etc.)
+- Network connectivity between Kubernetes nodes and NFS server
+- Proper NFS exports configured on your server
+
+### Step 1: Configure NFS Server
+
+#### On Synology NAS:
+1. Go to **Control Panel** → **Shared Folder**
+2. Create folders: `media`, `downloads`
+3. Go to **Control Panel** → **File Services** → **NFS**
+4. Enable NFS service
+5. Edit each shared folder → **NFS Permissions**:
+   - Hostname/IP: `192.168.1.0/24` (adjust for your network)
+   - Privilege: `Read/Write`
+   - Squash: `No mapping`
+   - Security: `sys`
+   - Enable `Allow connections from non-privileged ports`
+
+#### Manual NFS Server Configuration:
+```bash
+# Create directories on NFS server
+sudo mkdir -p /srv/nfs/media/{movies,tv,music,books}
+sudo mkdir -p /srv/nfs/downloads
+
+# Set ownership (important for media apps)
+sudo chown -R 1000:1000 /srv/nfs/media
+sudo chown -R 1000:1000 /srv/nfs/downloads
+
+# Configure exports (/etc/exports)
+echo "/srv/nfs/media    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports
+echo "/srv/nfs/downloads 192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports
+
+# Apply configuration
+sudo exportfs -rav
+sudo systemctl restart nfs-kernel-server
+```
+
+### Step 2: Prepare Kubernetes Nodes
+
+Install NFS client on all Kubernetes nodes:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install nfs-common
+
+# CentOS/RHEL/Rocky Linux
+sudo yum install nfs-utils
+
+# Enable and start required services
+sudo systemctl enable rpc-bind
+sudo systemctl start rpc-bind
+```
+
+### Step 3: Test NFS Connectivity
+
+Verify NFS connectivity from each Kubernetes node:
+
+```bash
+# Test mount
+sudo mkdir -p /mnt/test
+sudo mount -t nfs4 192.168.1.100:/volume1/media /mnt/test
+
+# Verify access
+ls -la /mnt/test
+touch /mnt/test/test-file
+rm /mnt/test/test-file
+
+# Unmount
+sudo umount /mnt/test
+```
+
+### Step 4: Configure Media Centre with NFS
+
+Use the NFS example configuration:
+
+```bash
+# Install with NFS configuration
+helm install media-centre ./charts/incubator/media-centre \
+  -f examples/values-nfs.yaml \
+  -n media --create-namespace
+```
+
+### NFS Configuration Examples
+
+#### Basic NFS Setup:
+```yaml
+# Single NFS server for all media
+sonarr:
+  persistence:
+    tv:
+      enabled: true
+      size: 5Ti  # Realistic sizing - match your NFS export capacity
+      accessMode: ReadWriteMany
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/tv"  # Actual capacity determined by NFS export
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+
+radarr:
+  persistence:
+    movies:
+      enabled: true
+      size: 8Ti  # Set based on actual NFS export size
+      accessMode: ReadWriteMany
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/movies"  # NFS export determines real capacity
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+```
+
+#### Hybrid Storage Strategy:
+```yaml
+# Fast local storage for configs, NFS for media
+sonarr:
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"  # Fast local storage
+      accessMode: ReadWriteOnce
+    tv:
+      enabled: true
+      nfs:
+        enabled: true
+        server: "192.168.1.100"
+        path: "/volume1/media/tv"
+```
+
+#### Multiple NFS Servers:
+```yaml
+# Different servers for different media types
+radarr:
+  persistence:
+    movies:
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Main NAS
+        path: "/volume1/movies"
+
+lidarr:
+  persistence:
+    music:
+      nfs:
+        enabled: true
+        server: "192.168.1.101"  # Music-specific server
+        path: "/music-library"
+```
+
+#### Using Existing NFS PVCs:
+```yaml
+# Reference manually created PVCs
+sonarr:
+  persistence:
+    tv:
+      enabled: true
+      existingClaim: "shared-tv-nfs-pvc"
+    downloads:
+      enabled: true
+      existingClaim: "shared-downloads-nfs-pvc"
+```
+
+### NFS Volume Sizing Strategy
+
+When using NFS, the `size` parameter has a different meaning than with dynamic storage:
+
+#### Understanding NFS Volume Sizes
+- **With StorageClass**: Size allocates actual storage capacity
+- **With NFS**: Size is a resource request/limit for Kubernetes quotas
+- **Actual capacity**: Determined by your NFS export, not the PVC size
+
+#### Recommended Sizing Approaches
+
+**Realistic Sizing (Recommended)**:
+```yaml
+# Match PVC size to actual NFS export capacity
+movies:
+  size: 8Ti    # Your NFS export is 10TB, leave 2TB headroom
+  nfs:
+    enabled: true
+    path: "/volume1/movies"  # 10TB NFS export
+```
+
+**Generous Sizing**:
+```yaml
+# Use large values for unlimited/expandable NFS storage
+movies:
+  size: 100Ti  # Large request, actual limit from NFS export
+  nfs:
+    enabled: true
+    path: "/volume1/movies"
+```
+
+**Minimal Sizing**:
+```yaml
+# Use small requests for quota management or testing
+movies:
+  size: 1Gi    # Minimal request, NFS provides actual capacity
+  nfs:
+    enabled: true
+    path: "/volume1/movies"
+```
+
+### Optimized NFS Mount Options
+
+For different use cases, consider these mount options:
+
+#### High Performance (Gigabit+ Network):
+```yaml
+mountOptions:
+  - nfsvers=4.1
+  - hard
+  - intr
+  - rsize=1048576    # 1MB read size
+  - wsize=1048576    # 1MB write size
+  - timeo=600        # 60 second timeout
+  - retrans=2        # 2 retransmissions
+  - proto=tcp        # Use TCP
+```
+
+#### Reliability Focused:
+```yaml
+mountOptions:
+  - nfsvers=4.1
+  - hard             # Wait for server recovery
+  - intr             # Allow interruption
+  - timeo=150        # 15 second timeout
+  - retrans=3        # More retries
+  - ac               # Enable attribute caching
+```
+
+#### Low Bandwidth Network:
+```yaml
+mountOptions:
+  - nfsvers=4.1
+  - hard
+  - intr
+  - rsize=65536      # 64KB read size
+  - wsize=65536      # 64KB write size
+  - timeo=300        # Longer timeout
 ```
 
 ## Post-Installation Setup
@@ -748,7 +1018,66 @@ kubectl port-forward svc/media-centre-radarr 7878:7878 -n media
 
 ### Common Issues
 
-#### 1. Pods Stuck in Pending State
+#### 1. NFS Mount Failures
+
+**Problem**: Pods fail to start with NFS mount errors
+
+```bash
+# Check pod events
+kubectl describe pod <pod-name> -n media
+```
+
+**Solutions**:
+- Verify NFS server is accessible: `ping 192.168.1.100`
+- Test manual NFS mount from nodes
+- Check NFS exports: `showmount -e 192.168.1.100`
+- Ensure nfs-common is installed on all nodes
+- Verify firewall rules allow NFS traffic (ports 111, 2049)
+
+#### 2. NFS Permission Issues
+
+**Problem**: Applications can't write to NFS shares
+
+```bash
+# Check NFS mount permissions in pod
+kubectl exec -it <pod-name> -n media -- ls -la /movies
+kubectl exec -it <pod-name> -n media -- touch /movies/test.txt
+```
+
+**Solutions**:
+- Set correct ownership on NFS server: `chown -R 1000:1000 /path/to/export`
+- Use `no_root_squash` in NFS exports
+- Verify PUID/PGID in application configuration
+- Check fsGroup in pod security context
+
+#### 3. NFS Performance Issues
+
+**Problem**: Slow file operations or timeouts
+
+**Solutions**:
+- Increase rsize/wsize in mount options
+- Use NFSv4.1 instead of older versions
+- Enable attribute caching with `ac` mount option
+- Check network bandwidth and latency
+- Consider using local storage for active downloads
+
+#### 4. NFS Connection Timeouts
+
+**Problem**: Applications lose connection to NFS server
+
+```bash
+# Check NFS client statistics
+kubectl exec -it <pod-name> -n media -- cat /proc/mounts | grep nfs
+kubectl exec -it <pod-name> -n media -- nfsstat -c
+```
+
+**Solutions**:
+- Increase timeo value in mount options
+- Use `hard` mount option to retry indefinitely
+- Check network stability between nodes and NFS server
+- Verify NFS server has sufficient resources
+
+#### 5. Pods Stuck in Pending State
 
 **Problem**: Pods not starting due to storage issues
 
@@ -826,7 +1155,17 @@ kubectl logs -f deployment/media-centre-qbittorrent -n media
 - Check tracker connectivity
 - Ensure proper ratio management
 
-#### 6. Monitoring Not Working
+#### 6. Multiple Applications Sharing NFS
+
+**Problem**: File conflicts or locking issues with shared NFS storage
+
+**Solutions**:
+- Use subdirectories for each application
+- Configure atomic moves in download clients
+- Use separate NFS exports for different applications
+- Enable file locking if supported by NFS server
+
+#### 7. Monitoring Not Working
 
 **Problem**: Exportarr metrics not available
 
@@ -862,7 +1201,67 @@ kubectl logs -f deployment/media-centre-qbittorrent -n media
 kubectl get events -n media --sort-by='.lastTimestamp'
 ```
 
+### NFS Troubleshooting Commands
+
+```bash
+# Check NFS server exports
+showmount -e 192.168.1.100
+
+# Test NFS connectivity
+rpcinfo -p 192.168.1.100
+
+# Check NFS client status in pod
+kubectl exec -it <pod-name> -n media -- mount | grep nfs
+kubectl exec -it <pod-name> -n media -- df -h
+
+# Monitor NFS performance
+kubectl exec -it <pod-name> -n media -- iostat -x 1
+
+# Check NFS client statistics
+kubectl exec -it <pod-name> -n media -- nfsstat -c
+
+# Verify file permissions
+kubectl exec -it <pod-name> -n media -- ls -la /media
+kubectl exec -it <pod-name> -n media -- id
+```
+
 ### Performance Optimization
+
+#### NFS Performance Tuning
+
+```yaml
+# Optimize NFS mount options for performance
+persistence:
+  movies:
+    nfs:
+      mountOptions:
+        - nfsvers=4.1
+        - proto=tcp
+        - hard
+        - intr
+        - rsize=1048576      # Large read buffer
+        - wsize=1048576      # Large write buffer
+        - timeo=600          # 60 second timeout
+        - retrans=2
+        - ac                 # Enable attribute caching
+        - actimeo=30         # Cache attributes for 30 seconds
+```
+
+#### Storage Strategy for Performance
+
+```yaml
+# Use local storage for configs and active downloads
+# Use NFS for media libraries (read-mostly)
+sabnzbd:
+  persistence:
+    config:
+      storageClass: "local-path"  # Fast local SSD
+    incomplete:
+      storageClass: "local-path"  # Active downloads on local storage
+    downloads:
+      nfs:
+        enabled: true             # Completed downloads on NFS
+```
 
 #### Resource Allocation
 

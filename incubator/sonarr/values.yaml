@@ -13,7 +13,7 @@ sonarr:
   
   image:
     # -- Sonarr image repository
-    repository: linuxserver/sonarr
+    repository: lscr.io/linuxserver/sonarr
     # -- Sonarr image tag
     tag: "latest"
     # -- Image pull policy
@@ -70,6 +70,21 @@ sonarr:
       size: 1Gi
       # -- Mount path for config
       mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Downloads persistence
     downloads:
@@ -83,6 +98,21 @@ sonarr:
       size: 50Gi
       # -- Mount path for downloads
       mountPath: /downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # TV shows persistence
     tv:
@@ -93,22 +123,52 @@ sonarr:
       # -- Access mode for TV volume
       accessMode: ReadWriteOnce
       # -- Size of TV volume
-      size: 500Gi
+      size: 2Ti
       # -- Mount path for TV shows
       mountPath: /tv
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for TV storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Anime persistence
     anime:
       # -- Enable anime persistence
-      enabled: true
+      enabled: false
       # -- Storage class for anime volume
       storageClass: ""
       # -- Access mode for anime volume
       accessMode: ReadWriteOnce
       # -- Size of anime volume
-      size: 200Gi
+      size: 500Gi
       # -- Mount path for anime
       mountPath: /anime
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for anime storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Data persistence (shared with download client)
     data:
@@ -122,6 +182,21 @@ sonarr:
       size: 100Gi
       # -- Mount path for data
       mountPath: /data
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for data storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
   # Resource limits and requests
   resources:

@@ -84,6 +84,21 @@ qbittorrent:
       size: 2Gi
       # -- Mount path for config
       mountPath: /config
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for config storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Downloads persistence
     downloads:
@@ -97,6 +112,21 @@ qbittorrent:
       size: 500Gi
       # -- Mount path for downloads
       mountPath: /downloads
+      # -- Existing claim name (optional)
+      existingClaim: ""
+      # NFS configuration
+      nfs:
+        # -- Enable NFS for downloads storage
+        enabled: false
+        # -- NFS server address
+        server: ""
+        # -- NFS export path
+        path: ""
+        # -- NFS mount options
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
 
     # Data persistence (shared with *arr apps)
     data:

@@ -1,82 +1,67 @@
-{{- if .Values.bazarr.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.bazarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled }}
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: PersistentVolume
 metadata:
-  name: {{ include "bazarr.fullname" . }}-config
+  name: {{ include "bazarr.fullname" $ }}-{{ $volumeName }}-nfs
   labels:
-    {{- include "bazarr.labels" . | nindent 4 }}
-    component: config
+    {{- include "bazarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
 spec:
+  capacity:
+    storage: {{ $volume.size }}
   accessModes:
-    - {{ .Values.bazarr.persistence.config.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.bazarr.persistence.config.size }}
-  {{- if .Values.bazarr.persistence.config.storageClass }}
-  storageClassName: {{ .Values.bazarr.persistence.config.storageClass }}
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
   {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
 {{- end }}
 
-{{- if .Values.bazarr.persistence.tv.enabled }}
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.bazarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "bazarr.fullname" . }}-tv
+  name: {{ include "bazarr.fullname" $ }}-{{ $volumeName }}
   labels:
-    {{- include "bazarr.labels" . | nindent 4 }}
-    component: tv
+    {{- include "bazarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.bazarr.persistence.tv.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.bazarr.persistence.tv.size }}
-  {{- if .Values.bazarr.persistence.tv.storageClass }}
-  storageClassName: {{ .Values.bazarr.persistence.tv.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "bazarr.fullname" $ }}-{{ $volumeName }}-nfs
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
+{{- end }}
 {{- end }}
 
-{{- if .Values.bazarr.persistence.movies.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "bazarr.fullname" . }}-movies
-  labels:
-    {{- include "bazarr.labels" . | nindent 4 }}
-    component: movies
-spec:
-  accessModes:
-    - {{ .Values.bazarr.persistence.movies.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.bazarr.persistence.movies.size }}
-  {{- if .Values.bazarr.persistence.movies.storageClass }}
-  storageClassName: {{ .Values.bazarr.persistence.movies.storageClass }}
-  {{- end }}
-{{- end }}
-
-{{- if .Values.bazarr.persistence.anime.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "bazarr.fullname" . }}-anime
-  labels:
-    {{- include "bazarr.labels" . | nindent 4 }}
-    component: anime
-spec:
-  accessModes:
-    - {{ .Values.bazarr.persistence.anime.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.bazarr.persistence.anime.size }}
-  {{- if .Values.bazarr.persistence.anime.storageClass }}
-  storageClassName: {{ .Values.bazarr.persistence.anime.storageClass }}
-  {{- end }}
-{{- end }}
 
 {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
 ---
@@ -86,7 +71,8 @@ metadata:
   name: {{ include "bazarr.fullname" . }}-gluetun
   labels:
     {{- include "bazarr.labels" . | nindent 4 }}
-    component: gluetun
+    app.kubernetes.io/component: gluetun
+    app.kubernetes.io/volume-type: gluetun
 spec:
   accessModes:
     - {{ .Values.gluetun.persistence.accessMode }}

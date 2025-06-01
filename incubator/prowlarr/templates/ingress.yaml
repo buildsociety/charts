@@ -1,3 +1,8 @@
+{{/*
+Ingress template for Prowlarr
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the Prowlarr service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.prowlarr.ingress.enabled -}}
 {{- $fullName := include "prowlarr.fullname" . -}}
 {{- $svcPort := .Values.prowlarr.service.port -}}

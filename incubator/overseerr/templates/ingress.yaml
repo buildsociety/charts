@@ -1,3 +1,8 @@
+{{/*
+Ingress template for Overseerr
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the Overseerr service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.overseerr.ingress.enabled -}}
 {{- $fullName := include "overseerr.fullname" . -}}
 {{- $svcPort := .Values.overseerr.service.port -}}

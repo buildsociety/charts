@@ -1,82 +1,77 @@
-{{- if .Values.lidarr.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.lidarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "lidarr.fullname" $ }}-{{ $volumeName }}-nfs
+  labels:
+    {{- include "lidarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
+spec:
+  capacity:
+    storage: {{ $volume.size }}
+  accessModes:
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
+{{- end }}
+
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.lidarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "lidarr.fullname" . }}-config
+  name: {{ include "lidarr.fullname" $ }}-{{ $volumeName }}
   labels:
-    {{- include "lidarr.labels" . | nindent 4 }}
+    {{- include "lidarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.lidarr.persistence.config.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.lidarr.persistence.config.size }}
-  {{- if .Values.lidarr.persistence.config.storageClass }}
-  storageClassName: {{ .Values.lidarr.persistence.config.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "lidarr.fullname" $ }}-{{ $volumeName }}-nfs
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
----
 {{- end }}
-{{- if .Values.lidarr.persistence.downloads.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "lidarr.fullname" . }}-downloads
-  labels:
-    {{- include "lidarr.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.lidarr.persistence.downloads.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.lidarr.persistence.downloads.size }}
-  {{- if .Values.lidarr.persistence.downloads.storageClass }}
-  storageClassName: {{ .Values.lidarr.persistence.downloads.storageClass }}
-  {{- end }}
----
 {{- end }}
-{{- if .Values.lidarr.persistence.music.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "lidarr.fullname" . }}-music
-  labels:
-    {{- include "lidarr.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.lidarr.persistence.music.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.lidarr.persistence.music.size }}
-  {{- if .Values.lidarr.persistence.music.storageClass }}
-  storageClassName: {{ .Values.lidarr.persistence.music.storageClass }}
-  {{- end }}
----
-{{- end }}
-{{- if .Values.lidarr.persistence.data.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "lidarr.fullname" . }}-data
-  labels:
-    {{- include "lidarr.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.lidarr.persistence.data.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.lidarr.persistence.data.size }}
-  {{- if .Values.lidarr.persistence.data.storageClass }}
-  storageClassName: {{ .Values.lidarr.persistence.data.storageClass }}
-  {{- end }}
----
-{{- end }}
+
 {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "lidarr.fullname" . }}-gluetun
   labels:
     {{- include "lidarr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gluetun
+    app.kubernetes.io/volume-type: gluetun
 spec:
   accessModes:
     - {{ .Values.gluetun.persistence.accessMode }}

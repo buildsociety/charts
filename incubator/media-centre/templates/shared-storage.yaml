@@ -1,3 +1,8 @@
+{{/*
+Shared Storage template for Media Centre
+Creates PersistentVolumeClaim and PersistentVolume resources for shared media storage,
+providing centralized storage that can be mounted by multiple media applications.
+*/}}
 {{- if and .Values.global.media.enabled (not .Values.global.media.existingClaim) }}
 ---
 apiVersion: v1

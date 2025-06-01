@@ -1,3 +1,8 @@
+{{/*
+HorizontalPodAutoscaler template for Pocket ID
+Creates a Kubernetes HorizontalPodAutoscaler resource that automatically scales
+the number of pods based on CPU/memory utilization or custom metrics.
+*/}}
 {{- if .Values.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

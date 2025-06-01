@@ -1,46 +1,77 @@
-{{- if .Values.prowlarr.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.prowlarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "prowlarr.fullname" $ }}-{{ $volumeName }}-nfs
+  labels:
+    {{- include "prowlarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
+spec:
+  capacity:
+    storage: {{ $volume.size }}
+  accessModes:
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
+{{- end }}
+
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.prowlarr.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "prowlarr.fullname" . }}-config
+  name: {{ include "prowlarr.fullname" $ }}-{{ $volumeName }}
   labels:
-    {{- include "prowlarr.labels" . | nindent 4 }}
+    {{- include "prowlarr.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.prowlarr.persistence.config.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.prowlarr.persistence.config.size }}
-  {{- if .Values.prowlarr.persistence.config.storageClass }}
-  storageClassName: {{ .Values.prowlarr.persistence.config.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "prowlarr.fullname" $ }}-{{ $volumeName }}-nfs
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
----
 {{- end }}
-{{- if .Values.prowlarr.persistence.data.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "prowlarr.fullname" . }}-data
-  labels:
-    {{- include "prowlarr.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.prowlarr.persistence.data.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.prowlarr.persistence.data.size }}
-  {{- if .Values.prowlarr.persistence.data.storageClass }}
-  storageClassName: {{ .Values.prowlarr.persistence.data.storageClass }}
-  {{- end }}
----
 {{- end }}
+
 {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "prowlarr.fullname" . }}-gluetun
   labels:
     {{- include "prowlarr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gluetun
+    app.kubernetes.io/volume-type: gluetun
 spec:
   accessModes:
     - {{ .Values.gluetun.persistence.accessMode }}

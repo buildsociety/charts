@@ -1,0 +1,216 @@
+# Example NFS configuration for Radarr
+# This shows how to use NFS shares for media storage with Radarr
+#
+# NFS Volume Sizing Notes:
+# - With NFS, 'size' is a resource request/limit, not actual storage allocation
+# - Actual capacity comes from your NFS export size
+# - Set realistic sizes for quotas and resource planning
+# - Three approaches: Realistic (match NFS export), Generous (large values), Minimal (small requests)
+
+# Basic Radarr configuration
+radarr:
+  enabled: true
+  
+  image:
+    repository: linuxserver/radarr
+    tag: "latest"
+  
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+  
+  service:
+    type: ClusterIP
+    port: 7878
+  
+  # Persistence configuration with NFS
+  persistence:
+    # Config storage - can use local storage for better performance
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "fast-ssd"  # Use local storage for configs
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads storage - NFS share for downloads
+    downloads:
+      enabled: true
+      size: 500Gi  # Realistic: Match your actual NFS export capacity
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/downloads"  # NFS export path (actual capacity determined here)
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Movies storage - NFS share for movie library
+    movies:
+      enabled: true
+      size: 10Ti  # Realistic: Set based on your NFS export size (leave some headroom)
+      accessMode: ReadWriteMany
+      mountPath: /movies
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/movies"  # NFS export path (determines actual capacity)
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Data storage - shared data between apps
+    data:
+      enabled: true
+      size: 1Ti
+      accessMode: ReadWriteMany
+      mountPath: /data
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/data"  # NFS export path for shared data
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# NFS Sizing Strategies Examples:
+
+# Strategy 1: Realistic Sizing (Recommended)
+# Match the size to your actual NFS export capacity
+# radarr:
+#   persistence:
+#     movies:
+#       size: 8Ti    # Your NFS export is 10TB, leave 2TB headroom
+#       nfs:
+#         enabled: true
+#         path: "/volume1/movies"  # 10TB NFS export
+
+# Strategy 2: Generous Sizing 
+# Use large values if you have unlimited/expandable NFS storage
+# radarr:
+#   persistence:
+#     movies:
+#       size: 100Ti  # Large request, actual limit from NFS export
+#       nfs:
+#         enabled: true
+#         path: "/volume1/movies"
+
+# Strategy 3: Minimal Sizing
+# Use small requests for quota management or testing
+# radarr:
+#   persistence:
+#     movies:
+#       size: 1Gi    # Minimal request, NFS provides actual capacity
+#       nfs:
+#         enabled: true
+#         path: "/volume1/movies"
+
+# Alternative configuration using existing NFS PVCs
+# Uncomment and modify this section if you already have NFS PVCs created
+#
+# radarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       existingClaim: "radarr-config-pvc"
+#       mountPath: /config
+#     
+#     downloads:
+#       enabled: true
+#       existingClaim: "shared-downloads-nfs"
+#       mountPath: /downloads
+#     
+#     movies:
+#       enabled: true
+#       existingClaim: "shared-movies-nfs"
+#       mountPath: /movies
+#     
+#     data:
+#       enabled: true
+#       existingClaim: "shared-data-nfs"
+#       mountPath: /data
+
+# Exportarr monitoring (optional)
+exportarr:
+  enabled: true
+  image:
+    repository: ghcr.io/onedr0p/exportarr
+    tag: "v2.0"
+  env:
+    PORT: "9707"
+    URL: "http://localhost:7878"
+    # API key should be configured after Radarr is running
+    APIKEY: ""
+
+# Security context for NFS compatibility
+pod:
+  securityContext:
+    fsGroup: 1000  # Should match your NFS export user/group
+    fsGroupChangePolicy: "OnRootMismatch"
+
+# Service account
+serviceAccount:
+  create: true
+
+---
+# Example of manually created shared NFS PVs (optional)
+# You can create these separately and reference them via existingClaim
+#
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shared-movies-nfs
+# spec:
+#   capacity:
+#     storage: 10Ti
+#   accessModes:
+#     - ReadWriteMany
+#   nfs:
+#     server: 192.168.1.100
+#     path: /volume1/media/movies
+#   mountOptions:
+#     - nfsvers=4.1
+#     - hard
+#     - intr
+#     - rsize=1048576
+#     - wsize=1048576
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: ""
+# 
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: shared-movies-nfs
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 10Ti
+#   volumeName: shared-movies-nfs
+#   storageClassName: ""

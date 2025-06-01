@@ -1,0 +1,178 @@
+# Example NFS configuration for Lidarr
+# This shows how to use NFS shares for music storage with Lidarr
+
+# Basic Lidarr configuration
+lidarr:
+  enabled: true
+  
+  image:
+    repository: linuxserver/lidarr
+    tag: "latest"
+  
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+  
+  service:
+    type: ClusterIP
+    port: 8686
+  
+  # Persistence configuration with NFS
+  persistence:
+    # Config storage - can use local storage for better performance
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: "fast-ssd"  # Use local storage for configs
+      accessMode: ReadWriteOnce
+      mountPath: /config
+      
+    # Downloads storage - NFS share for downloads
+    downloads:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /downloads
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/downloads"  # NFS export path
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Music storage - NFS share for music library
+    music:
+      enabled: true
+      size: 2Ti
+      accessMode: ReadWriteMany
+      mountPath: /music
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/media/music"  # NFS export path for music
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+    
+    # Data storage - shared data between apps
+    data:
+      enabled: true
+      size: 500Gi
+      accessMode: ReadWriteMany
+      mountPath: /data
+      nfs:
+        enabled: true
+        server: "192.168.1.100"  # Your NAS IP address
+        path: "/volume1/data"  # NFS export path for shared data
+        mountOptions:
+          - nfsvers=4.1
+          - hard
+          - intr
+          - rsize=1048576
+          - wsize=1048576
+          - timeo=600
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Alternative configuration using existing NFS PVCs
+# Uncomment and modify this section if you already have NFS PVCs created
+#
+# lidarr:
+#   persistence:
+#     config:
+#       enabled: true
+#       existingClaim: "lidarr-config-pvc"
+#       mountPath: /config
+#     
+#     downloads:
+#       enabled: true
+#       existingClaim: "shared-downloads-nfs"
+#       mountPath: /downloads
+#     
+#     music:
+#       enabled: true
+#       existingClaim: "shared-music-nfs"
+#       mountPath: /music
+#     
+#     data:
+#       enabled: true
+#       existingClaim: "shared-data-nfs"
+#       mountPath: /data
+
+# Exportarr monitoring (optional)
+exportarr:
+  enabled: true
+  image:
+    repository: ghcr.io/onedr0p/exportarr
+    tag: "v2.0"
+  env:
+    PORT: "9707"
+    URL: "http://localhost:8686"
+    # API key should be configured after Lidarr is running
+    APIKEY: ""
+
+# Security context for NFS compatibility
+pod:
+  securityContext:
+    fsGroup: 1000  # Should match your NFS export user/group
+    fsGroupChangePolicy: "OnRootMismatch"
+
+# Service account
+serviceAccount:
+  create: true
+
+---
+# Example of manually created shared NFS PVs (optional)
+# You can create these separately and reference them via existingClaim
+#
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shared-music-nfs
+# spec:
+#   capacity:
+#     storage: 2Ti
+#   accessModes:
+#     - ReadWriteMany
+#   nfs:
+#     server: 192.168.1.100
+#     path: /volume1/media/music
+#   mountOptions:
+#     - nfsvers=4.1
+#     - hard
+#     - intr
+#     - rsize=1048576
+#     - wsize=1048576
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: ""
+# 
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: shared-music-nfs
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 2Ti
+#   volumeName: shared-music-nfs
+#   storageClassName: ""

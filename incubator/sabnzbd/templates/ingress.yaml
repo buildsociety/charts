@@ -1,3 +1,8 @@
+{{/*
+Ingress template for SABnzbd
+Creates a Kubernetes Ingress resource that provides external HTTP/HTTPS access to the SABnzbd service,
+including routing rules, TLS configuration, and host-based routing.
+*/}}
 {{- if .Values.sabnzbd.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudflareddns.fullname" . }}
+  labels:
+    {{- include "cloudflareddns.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudflareddns.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "cloudflareddns.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cloudflareddns.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: PUID
+              value: {{ .Values.cloudflareddns.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.cloudflareddns.env.PGID | quote }}
+            - name: UMASK
+              value: {{ .Values.cloudflareddns.env.UMASK | quote }}
+            - name: TZ
+              value: {{ .Values.cloudflareddns.env.TZ | quote }}
+            - name: INTERVAL
+              value: {{ .Values.cloudflareddns.env.INTERVAL | quote }}
+            - name: DETECTION_MODE
+              value: {{ .Values.cloudflareddns.env.DETECTION_MODE | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.cloudflareddns.env.LOG_LEVEL | quote }}
+            {{- if .Values.cloudflareddns.hosts }}
+            - name: CF_HOSTS
+              value: {{ .Values.cloudflareddns.hosts | quote }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.zones }}
+            - name: CF_ZONES
+              value: {{ .Values.cloudflareddns.zones | quote }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.recordTypes }}
+            - name: CF_RECORDTYPES
+              value: {{ .Values.cloudflareddns.recordTypes | quote }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.existingSecret }}
+            {{- if .Values.cloudflareddns.credentials.email }}
+            - name: CF_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudflareddns.credentials.existingSecret }}
+                  key: {{ .Values.cloudflareddns.credentials.existingSecretKeys.email }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiKey }}
+            - name: CF_APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudflareddns.credentials.existingSecret }}
+                  key: {{ .Values.cloudflareddns.credentials.existingSecretKeys.apiKey }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiToken }}
+            - name: CF_APITOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudflareddns.credentials.existingSecret }}
+                  key: {{ .Values.cloudflareddns.credentials.existingSecretKeys.apiToken }}
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiTokenZone }}
+            - name: CF_APITOKEN_ZONE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudflareddns.credentials.existingSecret }}
+                  key: {{ .Values.cloudflareddns.credentials.existingSecretKeys.apiTokenZone }}
+            {{- end }}
+            {{- else }}
+            {{- if .Values.cloudflareddns.credentials.email }}
+            - name: CF_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cloudflareddns.fullname" . }}
+                  key: cf-email
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiKey }}
+            - name: CF_APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cloudflareddns.fullname" . }}
+                  key: cf-apikey
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiToken }}
+            - name: CF_APITOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cloudflareddns.fullname" . }}
+                  key: cf-apitoken
+            {{- end }}
+            {{- if .Values.cloudflareddns.credentials.apiTokenZone }}
+            - name: CF_APITOKEN_ZONE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cloudflareddns.fullname" . }}
+                  key: cf-apitoken-zone
+            {{- end }}
+            {{- end }}
+            {{- with .Values.cloudflareddns.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: config
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "cloudflareddns.fullname" .) }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

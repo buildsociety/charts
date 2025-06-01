@@ -1,3 +1,8 @@
+{{/*
+Service template for Tautulli
+Creates a Kubernetes Service resource that exposes the Tautulli application pods,
+defining network access and load balancing for the application.
+*/}}
 apiVersion: v1
 kind: Service
 metadata:

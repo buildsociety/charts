@@ -71,3 +71,50 @@ Generate certificates for webhook
 tls.crt: {{ $cert.Cert | b64enc }}
 tls.key: {{ $cert.Key | b64enc }}
 {{- end }}
+
+{{/*
+Generate PVC name for a given volume
+*/}}
+{{- define "radarr.pvcName" -}}
+{{- $volumeName := .volumeName -}}
+{{- $context := .context -}}
+{{- $volume := index $context.Values.radarr.persistence $volumeName -}}
+{{- if $volume.existingClaim -}}
+{{- $volume.existingClaim -}}
+{{- else -}}
+{{- printf "%s-%s" (include "radarr.fullname" $context) $volumeName -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Generate PV name for NFS volumes
+*/}}
+{{- define "radarr.pvName" -}}
+{{- $volumeName := .volumeName -}}
+{{- $context := .context -}}
+{{- printf "%s-%s-nfs" (include "radarr.fullname" $context) $volumeName -}}
+{{- end }}
+
+{{/*
+Check if a volume should create PVC (enabled and no existing claim)
+*/}}
+{{- define "radarr.shouldCreatePVC" -}}
+{{- $volumeName := .volumeName -}}
+{{- $context := .context -}}
+{{- $volume := index $context.Values.radarr.persistence $volumeName -}}
+{{- if and $volume.enabled (not $volume.existingClaim) -}}
+{{- true -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Check if a volume should create NFS PV
+*/}}
+{{- define "radarr.shouldCreateNFSPV" -}}
+{{- $volumeName := .volumeName -}}
+{{- $context := .context -}}
+{{- $volume := index $context.Values.radarr.persistence $volumeName -}}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled -}}
+{{- true -}}
+{{- end -}}
+{{- end }}

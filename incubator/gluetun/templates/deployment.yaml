@@ -1,3 +1,8 @@
+{{/*
+Deployment template for Gluetun
+Creates a Kubernetes Deployment resource that manages the Gluetun VPN client pods,
+including container configuration, environment variables, volume mounts, and resource limits.
+*/}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

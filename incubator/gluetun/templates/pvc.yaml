@@ -1,3 +1,8 @@
+{{/*
+PersistentVolumeClaim template for Gluetun
+Creates Kubernetes PersistentVolumeClaim resources for data persistence,
+defining storage requirements and access modes for the Gluetun VPN client.
+*/}}
 {{- if .Values.gluetun.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim

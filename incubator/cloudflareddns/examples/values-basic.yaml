@@ -1,0 +1,16 @@
+# Basic example using email and global API key
+cloudflareddns:
+  credentials:
+    email: "your.email@example.com"
+    apiKey: "your-global-api-key"
+  
+  # Single domain example
+  hosts: "home.example.com"
+  zones: "example.com"
+  recordTypes: "A"
+  
+  env:
+    # Check every 5 minutes
+    INTERVAL: "300"
+    # Standard logging
+    LOG_LEVEL: "3"

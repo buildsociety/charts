@@ -1,3 +1,8 @@
+{{/*
+Service template for Gluetun
+Creates Kubernetes Service resources that expose the Gluetun VPN client pods,
+defining network access and load balancing for internal and external connections.
+*/}}
 {{- if .Values.gluetun.service.internal.enabled }}
 ---
 apiVersion: v1

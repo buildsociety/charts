@@ -1,82 +1,77 @@
-{{- if .Values.qbittorrent.persistence.config.enabled }}
+{{/*
+Create NFS PersistentVolumes for enabled volumes with NFS configuration
+*/}}
+{{- range $volumeName, $volume := .Values.qbittorrent.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) $volume.nfs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "qbittorrent.fullname" $ }}-{{ $volumeName }}-nfs
+  labels:
+    {{- include "qbittorrent.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    storage.kubernetes.io/type: nfs
+spec:
+  capacity:
+    storage: {{ $volume.size }}
+  accessModes:
+    - {{ $volume.accessMode }}
+  nfs:
+    server: {{ $volume.nfs.server }}
+    path: {{ $volume.nfs.path }}
+  {{- if $volume.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml $volume.nfs.mountOptions | nindent 4 }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+{{- end }}
+{{- end }}
+
+{{/*
+Create PersistentVolumeClaims for all enabled volumes
+*/}}
+{{- range $volumeName, $volume := .Values.qbittorrent.persistence }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "qbittorrent.fullname" . }}-config
+  name: {{ include "qbittorrent.fullname" $ }}-{{ $volumeName }}
   labels:
-    {{- include "qbittorrent.labels" . | nindent 4 }}
+    {{- include "qbittorrent.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $volumeName }}
+    app.kubernetes.io/volume-type: {{ $volumeName }}
+    {{- if $volume.nfs.enabled }}
+    storage.kubernetes.io/type: nfs
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.qbittorrent.persistence.config.accessMode }}
+    - {{ $volume.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.qbittorrent.persistence.config.size }}
-  {{- if .Values.qbittorrent.persistence.config.storageClass }}
-  storageClassName: {{ .Values.qbittorrent.persistence.config.storageClass }}
+      storage: {{ $volume.size }}
+  {{- if $volume.nfs.enabled }}
+  volumeName: {{ include "qbittorrent.fullname" $ }}-{{ $volumeName }}-nfs
+  storageClassName: ""
+  {{- else if $volume.storageClass }}
+  storageClassName: {{ $volume.storageClass }}
   {{- end }}
----
 {{- end }}
-{{- if .Values.qbittorrent.persistence.downloads.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "qbittorrent.fullname" . }}-downloads
-  labels:
-    {{- include "qbittorrent.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.qbittorrent.persistence.downloads.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.qbittorrent.persistence.downloads.size }}
-  {{- if .Values.qbittorrent.persistence.downloads.storageClass }}
-  storageClassName: {{ .Values.qbittorrent.persistence.downloads.storageClass }}
-  {{- end }}
----
 {{- end }}
-{{- if .Values.qbittorrent.persistence.data.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "qbittorrent.fullname" . }}-data
-  labels:
-    {{- include "qbittorrent.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.qbittorrent.persistence.data.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.qbittorrent.persistence.data.size }}
-  {{- if .Values.qbittorrent.persistence.data.storageClass }}
-  storageClassName: {{ .Values.qbittorrent.persistence.data.storageClass }}
-  {{- end }}
----
-{{- end }}
-{{- if .Values.qbittorrent.persistence.incomplete.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "qbittorrent.fullname" . }}-incomplete
-  labels:
-    {{- include "qbittorrent.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.qbittorrent.persistence.incomplete.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.qbittorrent.persistence.incomplete.size }}
-  {{- if .Values.qbittorrent.persistence.incomplete.storageClass }}
-  storageClassName: {{ .Values.qbittorrent.persistence.incomplete.storageClass }}
-  {{- end }}
----
-{{- end }}
+
 {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "qbittorrent.fullname" . }}-gluetun
   labels:
     {{- include "qbittorrent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gluetun
+    app.kubernetes.io/volume-type: gluetun
 spec:
   accessModes:
     - {{ .Values.gluetun.persistence.accessMode }}

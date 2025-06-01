@@ -13,9 +13,10 @@ keywords:
   - music
   - books
   - vpn
-home: https://github.com/your-org/charts
+home: https://github.com/trozz/charts
 sources:
-  - https://github.com/your-org/charts
+  - https://github.com/trozz/charts
+icon: https://raw.githubusercontent.com/trozz/charts/main/assets/media-centre-icon.png
 maintainers:
   - name: Michael Leer
     email: michael@leer.dev

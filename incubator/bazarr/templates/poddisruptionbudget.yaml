@@ -1,3 +1,8 @@
+{{/*
+PodDisruptionBudget template for Bazarr
+Creates a Kubernetes PodDisruptionBudget resource that limits the number of pods
+that can be disrupted simultaneously, ensuring application availability during updates.
+*/}}
 {{- if .Values.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
