@@ -28,7 +28,7 @@ spec:
               service:
                 name: {{ $fullName }}-service
                 port:
-                  number: 80
+                  number: {{ $.Values.service.port }}
             pathType: {{ .pathType | default "ImplementationSpecific" }}
         {{- end }}
 {{- end }}

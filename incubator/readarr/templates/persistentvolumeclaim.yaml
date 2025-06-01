@@ -1,0 +1,119 @@
+{{- if .Values.readarr.persistence.config.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-config
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: config
+spec:
+  accessModes:
+    - {{ .Values.readarr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.readarr.persistence.config.size }}
+  {{- if .Values.readarr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.readarr.persistence.config.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.readarr.persistence.downloads.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-downloads
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: downloads
+spec:
+  accessModes:
+    - {{ .Values.readarr.persistence.downloads.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.readarr.persistence.downloads.size }}
+  {{- if .Values.readarr.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.readarr.persistence.downloads.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.readarr.persistence.books.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-books
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: books
+spec:
+  accessModes:
+    - {{ .Values.readarr.persistence.books.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.readarr.persistence.books.size }}
+  {{- if .Values.readarr.persistence.books.storageClass }}
+  storageClassName: {{ .Values.readarr.persistence.books.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.readarr.persistence.audiobooks.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-audiobooks
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: audiobooks
+spec:
+  accessModes:
+    - {{ .Values.readarr.persistence.audiobooks.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.readarr.persistence.audiobooks.size }}
+  {{- if .Values.readarr.persistence.audiobooks.storageClass }}
+  storageClassName: {{ .Values.readarr.persistence.audiobooks.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.readarr.persistence.data.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-data
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: data
+spec:
+  accessModes:
+    - {{ .Values.readarr.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.readarr.persistence.data.size }}
+  {{- if .Values.readarr.persistence.data.storageClass }}
+  storageClassName: {{ .Values.readarr.persistence.data.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "readarr.fullname" . }}-gluetun
+  labels:
+    {{- include "readarr.labels" . | nindent 4 }}
+    component: gluetun
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "overseerr.fullname" . }}
+  labels:
+    {{- include "overseerr.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "overseerr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.overseerr.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.overseerr.homepage.enabled }}
+        homepage.group: {{ .Values.overseerr.homepage.group | quote }}
+        homepage.name: {{ .Values.overseerr.homepage.name | quote }}
+        homepage.description: {{ .Values.overseerr.homepage.description | quote }}
+        homepage.href: http://{{ include "overseerr.fullname" . }}:{{ .Values.overseerr.service.port }}
+        homepage.widget.type: {{ .Values.overseerr.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.overseerr.homepage.widget.url | quote }}
+        {{- if .Values.overseerr.homepage.widget.key }}
+        homepage.widget.key: {{ .Values.overseerr.homepage.widget.key | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "overseerr.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "overseerr.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+
+      containers:
+        - name: overseerr
+          image: "{{ .Values.overseerr.image.repository }}:{{ .Values.overseerr.image.tag }}"
+          imagePullPolicy: {{ .Values.overseerr.image.pullPolicy }}
+          
+          ports:
+            - name: http
+              containerPort: {{ .Values.overseerr.service.targetPort }}
+              protocol: TCP
+
+          env:
+            - name: PUID
+              value: {{ .Values.overseerr.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.overseerr.env.PGID | quote }}
+            - name: TZ
+              value: {{ .Values.overseerr.env.TZ | quote }}
+            - name: UMASK_SET
+              value: {{ .Values.overseerr.env.UMASK_SET | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.overseerr.env.LOG_LEVEL | quote }}
+            - name: PORT
+              value: {{ .Values.overseerr.env.PORT | quote }}
+            {{- if .Values.overseerr.settings.baseUrl }}
+            - name: BASE_URL
+              value: {{ .Values.overseerr.settings.baseUrl | quote }}
+            {{- end }}
+            {{- if .Values.overseerr.settings.trustProxy }}
+            - name: TRUST_PROXY
+              value: "true"
+            {{- end }}
+
+          volumeMounts:
+            {{- if .Values.overseerr.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.overseerr.persistence.config.mountPath }}
+            {{- end }}
+            {{- if .Values.overseerr.persistence.logs.enabled }}
+            - name: logs
+              mountPath: {{ .Values.overseerr.persistence.logs.mountPath }}
+            {{- end }}
+
+          livenessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: {{ .Values.overseerr.service.targetPort }}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+
+          readinessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: {{ .Values.overseerr.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.overseerr.resources | nindent 12 }}
+          
+          securityContext:
+            {{- toYaml .Values.overseerr.securityContext | nindent 12 }}
+
+      volumes:
+        {{- if .Values.overseerr.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "overseerr.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.overseerr.persistence.logs.enabled }}
+        - name: logs
+          persistentVolumeClaim:
+            claimName: {{ include "overseerr.fullname" . }}-logs
+        {{- end }}
+
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

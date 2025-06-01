@@ -1,0 +1,53 @@
+{{- if .Values.prowlarr.persistence.config.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "prowlarr.fullname" . }}-config
+  labels:
+    {{- include "prowlarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.prowlarr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.prowlarr.persistence.config.size }}
+  {{- if .Values.prowlarr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.prowlarr.persistence.config.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.prowlarr.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "prowlarr.fullname" . }}-data
+  labels:
+    {{- include "prowlarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.prowlarr.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.prowlarr.persistence.data.size }}
+  {{- if .Values.prowlarr.persistence.data.storageClass }}
+  storageClassName: {{ .Values.prowlarr.persistence.data.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "prowlarr.fullname" . }}-gluetun
+  labels:
+    {{- include "prowlarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

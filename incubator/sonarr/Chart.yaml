@@ -1,0 +1,21 @@
+apiVersion: v2
+name: sonarr
+description: A Helm chart for Sonarr - Smart PVR for newsgroup and bittorrent users
+type: application
+version: 0.1.0
+appVersion: "4.0.8"
+keywords:
+  - sonarr
+  - media
+  - automation
+  - pvr
+  - tv
+  - shows
+home: https://sonarr.tv/
+sources:
+  - https://github.com/Sonarr/Sonarr
+  - https://github.com/linuxserver/docker-sonarr
+icon: https://raw.githubusercontent.com/Sonarr/Sonarr/develop/Logo/256.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

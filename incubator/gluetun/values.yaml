@@ -1,0 +1,419 @@
+# Default values for gluetun
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # -- Set the global timezone
+  timezone: "Europe/London"
+
+# Gluetun configuration
+gluetun:
+  # -- Enable or disable Gluetun
+  enabled: true
+  
+  image:
+    # -- Gluetun image repository
+    repository: ghcr.io/qdm12/gluetun
+    # -- Gluetun image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- Environment variables for Gluetun
+  env:
+    # -- Timezone
+    TZ: "Europe/London"
+    # -- Enable HTTP proxy
+    HTTPPROXY: "on"
+    # -- HTTP proxy listening address
+    HTTPPROXY_LISTENING_ADDRESS: ":8888"
+    # -- Enable Shadowsocks
+    SHADOWSOCKS: "on"
+    # -- Shadowsocks listening address
+    SHADOWSOCKS_LISTENING_ADDRESS: ":8388"
+    # -- Enable SOCKS5 proxy
+    SOCKSPROXY: "on"
+    # -- SOCKS5 proxy listening address
+    SOCKSPROXY_LISTENING_ADDRESS: ":1080"
+    # -- Control server listening address
+    CONTROL_SERVER_LISTENING_ADDRESS: ":8000"
+    # -- Firewall outbound subnets (allow cluster communication)
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    # -- Enable VPN port forwarding
+    VPN_PORT_FORWARDING: "on"
+    # -- Server update period
+    UPDATER_PERIOD: "24h"
+    # -- Log level
+    LOG_LEVEL: "info"
+    # -- Health check target URL
+    HEALTH_TARGET_ADDRESS: "cloudflare.com:443"
+    # -- Health check interval
+    HEALTH_SUCCESS_WAIT_DURATION: "5s"
+
+  # Service configuration
+  service:
+    # Internal service (ClusterIP) for cluster access
+    internal:
+      # -- Enable internal service
+      enabled: true
+      # -- Service type for internal access
+      type: ClusterIP
+      # -- Service annotations
+      annotations: {}
+      # -- Service labels
+      labels: {}
+      ports:
+        # -- HTTP proxy port
+        httpProxy:
+          port: 8888
+          targetPort: 8888
+          protocol: TCP
+        # -- Shadowsocks TCP port
+        shadowsocksTcp:
+          port: 8388
+          targetPort: 8388
+          protocol: TCP
+        # -- Shadowsocks UDP port
+        shadowsocksUdp:
+          port: 8388
+          targetPort: 8388
+          protocol: UDP
+        # -- SOCKS5 proxy port
+        socks5:
+          port: 1080
+          targetPort: 1080
+          protocol: TCP
+        # -- Control server port
+        control:
+          port: 8000
+          targetPort: 8000
+          protocol: TCP
+
+    # External service for external access
+    external:
+      # -- Enable external service
+      enabled: false
+      # -- Service type for external access (NodePort, LoadBalancer)
+      type: NodePort
+      # -- Service annotations for external service
+      annotations: {}
+      # -- Service labels for external service
+      labels: {}
+      # -- Load balancer IP (when type is LoadBalancer)
+      loadBalancerIP: ""
+      # -- Load balancer source ranges
+      loadBalancerSourceRanges: []
+      ports:
+        # -- HTTP proxy external port
+        httpProxy:
+          port: 8888
+          targetPort: 8888
+          protocol: TCP
+          nodePort: 30888
+        # -- Shadowsocks TCP external port
+        shadowsocksTcp:
+          port: 8388
+          targetPort: 8388
+          protocol: TCP
+          nodePort: 30388
+        # -- Shadowsocks UDP external port
+        shadowsocksUdp:
+          port: 8388
+          targetPort: 8388
+          protocol: UDP
+          nodePort: 30389
+        # -- SOCKS5 proxy external port
+        socks5:
+          port: 1080
+          targetPort: 1080
+          protocol: TCP
+          nodePort: 31080
+        # -- Control server external port
+        control:
+          port: 8000
+          targetPort: 8000
+          protocol: TCP
+          nodePort: 30800
+
+  # Ingress configuration (for HTTP proxy web interface)
+  ingress:
+    # -- Enable ingress
+    enabled: false
+    # -- Ingress class name
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # -- Ingress hosts configuration
+    hosts:
+      - host: gluetun.local
+        paths:
+          - path: /
+            pathType: Prefix
+            service: control
+    # -- TLS configuration
+    tls: []
+
+  # Persistence configuration
+  persistence:
+    # -- Enable persistence for Gluetun config
+    enabled: true
+    # -- Storage class
+    storageClass: ""
+    # -- Access mode
+    accessMode: ReadWriteOnce
+    # -- Volume size
+    size: 1Gi
+    # -- Mount path
+    mountPath: /gluetun
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+  # Security context (requires NET_ADMIN capability)
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsNonRoot: false
+    runAsUser: 0
+
+  # VPN Provider configurations
+  vpn:
+    # NordVPN configuration
+    nordvpn:
+      # -- Enable NordVPN
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "nordvpn"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+      # -- Server cities
+      serverCities: ""
+      # -- Server countries
+      serverCountries: ""
+
+    # Mullvad configuration
+    mullvad:
+      # -- Enable Mullvad
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "mullvad"
+      # -- VPN type
+      type: "wireguard"
+      # -- Wireguard private key (store in secret)
+      privateKey: ""
+      # -- Wireguard addresses
+      addresses: ""
+      # -- Server cities
+      serverCities: ""
+      # -- Server countries
+      serverCountries: ""
+
+    # Private Internet Access configuration
+    pia:
+      # -- Enable Private Internet Access
+      enabled: true
+      # -- VPN service provider
+      serviceProvider: "private internet access"
+      # -- OpenVPN username (store in secret)
+      username: ""
+      # -- OpenVPN password (store in secret)
+      password: ""
+      # -- Server regions
+      serverRegions: "UK London"
+
+    # ExpressVPN configuration
+    expressvpn:
+      # -- Enable ExpressVPN
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "expressvpn"
+      # -- OpenVPN username (store in secret)
+      username: ""
+      # -- OpenVPN password (store in secret)
+      password: ""
+      # -- Server names
+      serverNames: ""
+
+    # Surfshark configuration
+    surfshark:
+      # -- Enable Surfshark
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "surfshark"
+      # -- OpenVPN username (store in secret)
+      username: ""
+      # -- OpenVPN password (store in secret)
+      password: ""
+      # -- Server regions
+      serverRegions: ""
+
+    # Custom OpenVPN configuration
+    custom:
+      # -- Enable custom OpenVPN
+      enabled: false
+      # -- VPN service provider
+      serviceProvider: "custom"
+      # -- OpenVPN configuration file content
+      configFileContent: ""
+
+  # Health checks configuration
+  healthCheck:
+    # -- Enable health checks
+    enabled: true
+    # -- Initial delay before health checks start
+    initialDelaySeconds: 30
+    # -- Interval between health checks
+    periodSeconds: 30
+    # -- Timeout for health checks
+    timeoutSeconds: 10
+    # -- Number of failures before pod restart
+    failureThreshold: 3
+    # -- Number of successes before pod is ready
+    successThreshold: 1
+
+  # ConfigMap for additional configuration
+  configMap:
+    # -- Enable configMap creation
+    enabled: false
+    # -- Additional configuration data
+    data: {}
+    # -- Custom scripts
+    scripts: {}
+
+  # Homepage integration labels
+  homepage:
+    # -- Enable homepage integration
+    enabled: true
+    # -- Homepage group
+    group: "Network"
+    # -- Homepage name
+    name: "Gluetun VPN"
+    # -- Homepage description
+    description: "VPN Gateway"
+    # -- Homepage widget type
+    widget:
+      type: "gluetun"
+      # -- Internal URL for widget API calls
+      url: "http://gluetun:8000"
+
+# Pod-level configuration
+pod:
+  # -- Pod restart policy
+  restartPolicy: Always
+  # -- Pod security context
+  securityContext:
+    fsGroup: 1000
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  annotations: {}
+  # -- Pod labels
+  labels: {}
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name
+  name: ""
+
+# Network policies
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Ingress rules (allow access to proxy services)
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 8388
+        - protocol: UDP
+          port: 8388
+        - protocol: TCP
+          port: 1080
+        - protocol: TCP
+          port: 8000
+  # -- Egress rules (allow VPN traffic)
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 1194
+        - protocol: UDP
+          port: 1194
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+  # -- Maximum number of pods that can be unavailable
+  maxUnavailable: ""
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  # -- Enable ServiceMonitor for Prometheus
+  enabled: false
+  # -- ServiceMonitor labels
+  labels: {}
+  # -- ServiceMonitor annotations
+  annotations: {}
+  # -- Scrape interval
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Metrics path
+  path: "/v1/metrics"
+  # -- Additional scrape parameters
+  params: {}
+  # -- Basic auth configuration
+  basicAuth: {}
+  # -- Bearer token secret
+  bearerTokenSecret: {}
+  # -- TLS configuration
+  tlsConfig: {}
+  # -- Relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs
+  metricRelabelings: []
+  # -- Namespace selector
+  namespaceSelector: {}
+  # -- Target labels
+  targetLabels: []
+
+# Horizontal Pod Autoscaler
+hpa:
+  # -- Enable HPA
+  enabled: false
+  # -- Minimum number of pods
+  minReplicas: 1
+  # -- Maximum number of pods
+  maxReplicas: 3
+  # -- Target CPU utilization percentage
+  targetCPUUtilizationPercentage: 80
+  # -- Target memory utilization percentage
+  targetMemoryUtilizationPercentage: 80

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: bazarr
+description: A Helm chart for Bazarr - Subtitle manager for Sonarr and Radarr
+type: application
+version: 0.1.0
+appVersion: "1.4.3"
+keywords:
+  - bazarr
+  - subtitles
+  - media
+  - automation
+  - sonarr
+  - radarr
+home: https://www.bazarr.media/
+sources:
+  - https://github.com/morpheus65535/bazarr
+  - https://github.com/linuxserver/docker-bazarr
+icon: https://raw.githubusercontent.com/morpheus65535/bazarr/master/frontend/public/images/logo128.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

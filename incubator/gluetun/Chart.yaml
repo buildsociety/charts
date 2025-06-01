@@ -1,0 +1,23 @@
+apiVersion: v2
+name: gluetun
+description: A Helm chart for Gluetun - Lightweight VPN client with HTTP proxy, SOCKS5 proxy, and Shadowsocks
+type: application
+version: 0.1.0
+appVersion: "v3.37.0"
+keywords:
+  - gluetun
+  - vpn
+  - proxy
+  - wireguard
+  - openvpn
+  - shadowsocks
+  - socks5
+  - http-proxy
+home: https://github.com/qdm12/gluetun
+sources:
+  - https://github.com/qdm12/gluetun
+  - https://github.com/qdm12/gluetun-wiki
+icon: https://raw.githubusercontent.com/qdm12/gluetun/master/docs/logo.svg
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

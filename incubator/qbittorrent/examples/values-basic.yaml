@@ -1,0 +1,97 @@
+# Basic qBittorrent Configuration
+# ⚠️ WARNING: VPN disabled - FOR TESTING ONLY
+# For production use, always enable VPN for privacy and security
+
+qbittorrent:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+    UMASK_SET: "022"
+    WEBUI_PORTS: "8080"
+
+  # Resource configuration for basic usage
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      # storageClass: "default"
+      
+    downloads:
+      enabled: true
+      size: 1Ti
+      # storageClass: "default"
+      
+    data:
+      enabled: true
+      size: 200Gi
+      # storageClass: "default"
+      
+    incomplete:
+      enabled: false
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+    additionalPorts:
+      bittorrent:
+        port: 6881
+        targetPort: 6881
+        protocol: TCP
+      dht:
+        port: 6881
+        targetPort: 6881
+        protocol: UDP
+
+  # qBittorrent specific settings
+  settings:
+    alternativeWebUI: false
+    anonymousMode: false
+    autoBan: true
+    maxFailedAttempts: 5
+    banDuration: 3600
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Downloads"
+    name: "qBittorrent"
+    description: "Torrent Client (No VPN)"
+    widget:
+      type: "qbittorrent"
+      url: "http://qbittorrent:8080"
+      username: "admin"
+      # password: "check-logs-for-generated-password"
+
+# ⚠️ VPN DISABLED - NOT RECOMMENDED FOR PRODUCTION
+gluetun:
+  enabled: false
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  annotations:
+    warning: "VPN disabled - use only for testing purposes"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policy disabled for basic setup
+networkPolicy:
+  enabled: false

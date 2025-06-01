@@ -1,0 +1,21 @@
+apiVersion: v2
+name: sabnzbd
+description: A Helm chart for SABnzbd - The automated Usenet download tool
+type: application
+version: 0.1.0
+appVersion: "4.1.0"
+keywords:
+  - sabnzbd
+  - usenet
+  - newsreader
+  - automation
+  - downloads
+  - binary
+home: https://sabnzbd.org/
+sources:
+  - https://github.com/sabnzbd/sabnzbd
+  - https://github.com/linuxserver/docker-sabnzbd
+icon: https://raw.githubusercontent.com/sabnzbd/sabnzbd/develop/interfaces/wizard/static/images/logo-arrow.svg
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

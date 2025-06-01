@@ -2,6 +2,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ include "pocket-id.fullname" . }}-pvc
+  labels:
+    {{- include "pocket-id.labels" . | nindent 4 }}
 spec:
   accessModes:
     - ReadWriteOnce

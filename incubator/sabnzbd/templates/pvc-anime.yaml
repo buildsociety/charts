@@ -1,0 +1,17 @@
+{{- if .Values.sabnzbd.persistence.anime.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sabnzbd.fullname" . }}-anime
+  labels:
+    {{- include "sabnzbd.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.sabnzbd.persistence.anime.accessMode }}
+  {{- if .Values.sabnzbd.persistence.anime.storageClass }}
+  storageClassName: {{ .Values.sabnzbd.persistence.anime.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.sabnzbd.persistence.anime.size }}
+{{- end }}

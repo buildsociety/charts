@@ -1,0 +1,67 @@
+# Minimal configuration for media-centre chart
+# This provides a basic working setup with essential components
+
+# Global settings
+global:
+  media:
+    size: 500Gi
+  downloads:
+    size: 100Gi
+  network:
+    useVPN: true
+
+# VPN - Required for secure downloading
+gluetun:
+  enabled: true
+  env:
+    VPN_SERVICE_PROVIDER: "nordvpn"
+    VPN_TYPE: "openvpn"
+    # Set these via environment or secrets:
+    # OPENVPN_USER: "your-username"
+    # OPENVPN_PASSWORD: "your-password"
+
+# Usenet downloader
+sabnzbd:
+  enabled: true
+  env:
+    TZ: "UTC"
+
+# Torrent downloader - disabled to keep it simple
+qbittorrent:
+  enabled: false
+
+# Indexer manager
+prowlarr:
+  enabled: true
+  env:
+    TZ: "UTC"
+  exportarr:
+    enabled: false
+
+# TV show management
+sonarr:
+  enabled: true
+  env:
+    TZ: "UTC"
+  exportarr:
+    enabled: false
+
+# Movie management
+radarr:
+  enabled: true
+  env:
+    TZ: "UTC"
+  exportarr:
+    enabled: false
+
+# Music management - disabled for minimal setup
+lidarr:
+  enabled: false
+
+# Book management - disabled for minimal setup
+readarr:
+  enabled: false
+
+# Subtitle management - disabled for minimal setup
+bazarr:
+  enabled: false

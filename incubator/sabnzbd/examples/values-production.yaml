@@ -1,0 +1,327 @@
+# Production SABnzbd Configuration
+# This example shows a production-ready SABnzbd setup with all features enabled
+
+sabnzbd:
+  # Production environment configuration
+  env:
+    TZ: "UTC"
+    PUID: 1000
+    PGID: 1000
+    HOST: "0.0.0.0"
+    PORT: "8080"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+    additionalPorts:
+      - name: https
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+
+  # Production storage configuration
+  persistence:
+    config:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+    
+    downloads:
+      enabled: true
+      size: 5Ti
+      storageClass: "bulk-storage"
+      accessMode: ReadWriteOnce
+    
+    incomplete:
+      enabled: true
+      size: 1Ti
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+    
+    tv:
+      enabled: true
+      size: 3Ti
+      storageClass: "bulk-storage"
+      accessMode: ReadWriteOnce
+    
+    anime:
+      enabled: true
+      size: 1Ti
+      storageClass: "bulk-storage"
+      accessMode: ReadWriteOnce
+    
+    data:
+      enabled: true
+      size: 500Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+
+  # Production resource allocation
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+  # Enhanced health checks
+  healthcheck:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /api/v1/status
+        port: 8080
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      timeoutSeconds: 15
+      failureThreshold: 5
+      successThreshold: 1
+    readinessProbe:
+      httpGet:
+        path: /api/v1/status
+        port: 8080
+      initialDelaySeconds: 60
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 3
+      successThreshold: 1
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+
+  # Production ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: sabnzbd.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: sabnzbd-tls
+        hosts:
+          - sabnzbd.example.com
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "SABnzbd"
+    description: "Usenet Download Client"
+    widget:
+      type: "sabnzbd"
+      url: "http://sabnzbd:8080"
+      # key: "your-production-api-key"
+
+# Production VPN Configuration (Optional but recommended)
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # VPN security context
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsUser: 0
+    runAsGroup: 0
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Production VPN environment
+  env:
+    TZ: "UTC"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+    LOG_LEVEL: "info"
+
+  # VPN provider configuration (example with PIA)
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # Use external secret for credentials
+      username: ""  # Set via external secret
+      password: ""  # Set via external secret
+      serverRegions: "UK London"
+
+  # VPN persistence
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "fast-ssd"
+    accessMode: ReadWriteOnce
+
+  # VPN resources
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Production pod configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: "OnRootMismatch"
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  
+  # Production node selection
+  nodeSelector:
+    kubernetes.io/arch: amd64
+    # node-type: media-workload
+  
+  # Anti-affinity for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - sabnzbd
+            topologyKey: kubernetes.io/hostname
+  
+  tolerations: []
+  
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/api/v1/stats"
+  
+  labels:
+    app.kubernetes.io/component: "usenet-client"
+    app.kubernetes.io/part-of: "media-stack"
+
+# Service account with minimal permissions
+serviceAccount:
+  create: true
+  annotations:
+    kubernetes.io/managed-by: "helm"
+  name: ""
+
+# Production network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow *arr applications
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: radarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lidarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: readarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: bazarr
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow VPN traffic when enabled
+    - {}
+
+# Pod Disruption Budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Production monitoring
+serviceMonitor:
+  enabled: true
+  labels:
+    app.kubernetes.io/component: monitoring
+  annotations: {}
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/api/v1/stats"
+  scheme: http
+  tlsConfig: {}
+  relabelings: []
+  metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'sabnzbd_.*'
+      action: keep
+  namespaceSelector: {}
+  targetLabels: []
+
+# Horizontal Pod Autoscaler (disabled by default for single-instance applications)
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Production notes:
+# 1. Configure external secrets for VPN credentials
+# 2. Set up proper backup strategy for config volume
+# 3. Configure log aggregation (ELK/Loki)
+# 4. Set up alerting for failed downloads
+# 5. Regular health monitoring via ServiceMonitor
+# 6. Use init containers for permission setup if needed
+# 7. Consider using Velero for backup/restore
+# 8. Configure resource quotas at namespace level
+# 9. Implement proper RBAC policies
+# 10. Use network policies to restrict traffic

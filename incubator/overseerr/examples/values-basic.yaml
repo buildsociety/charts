@@ -1,0 +1,90 @@
+# Basic Overseerr Configuration
+# This example shows a simple Overseerr setup for request management
+
+overseerr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+    UMASK_SET: "022"
+    LOG_LEVEL: "info"
+    PORT: "5055"
+
+  # Basic resource configuration
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      # storageClass: "default"
+      
+    logs:
+      enabled: false
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5055
+
+  # Application settings
+  settings:
+    baseUrl: ""
+    trustProxy: false
+    apiRateLimit: true
+    apiRateLimitMax: 100
+    apiRateLimitWindow: 15
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Overseerr"
+    description: "Request Manager"
+    widget:
+      type: "overseerr"
+      url: "http://overseerr:5055"
+      # key: "your-api-key-here"
+
+  # Ingress disabled for basic setup
+  ingress:
+    enabled: false
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  annotations:
+    description: "Basic Overseerr request management system"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Advanced features disabled for basic setup
+networkPolicy:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
+
+hpa:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+# Global settings
+global:
+  timezone: "America/New_York"

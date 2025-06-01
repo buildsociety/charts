@@ -1,11 +1,11 @@
-# Default values for jenkins-relay.
+# Default values for pocket-id.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
 
 image:
-  repository: stonith404/pocket-id
+  repository: ghcr.io/pocket-id/pocket-id
   tag: latest
   pullPolicy: Always
 
@@ -13,19 +13,49 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
 podSecurityContext:
   fsGroup: 2000
 
 securityContext:
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
   runAsNonRoot: true
   runAsUser: 1000
+  seccompProfile:
+    type: RuntimeDefault
 
 service:
   type: ClusterIP
+  port: 1411
+
+# Environment variables for PocketID
+# Common PocketID environment variables:
+# - PUBLIC_APP_URL: The public URL of your PocketID instance (auto-configured from ingress)
+# - TRUST_PROXY: Set to "true" when behind a proxy (auto-configured)
+# - DATABASE_URL: SQLite database URL (default: uses local file in /app/data)
+# - JWT_SECRET: Secret for JWT tokens (auto-generated if not set)
+# - ADMIN_USERNAME: Initial admin username
+# - ADMIN_PASSWORD: Initial admin password
+env: []
+  # - name: ADMIN_USERNAME
+  #   value: "admin"
+  # - name: ADMIN_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: pocket-id-secrets
+  #       key: admin-password
 
 ingress:
   enabled: true
@@ -45,16 +75,55 @@ storage:
   storageClassName: gp2
   size: 2Gi
 
-resources: {}
-  #limits:
-  #  cpu: 100m
-  #  memory: 128Mi
-  #requests:
-  #  cpu: 100m
-  #  memory: 128Mi
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
 
 nodeSelector: {}
 
 tolerations: []
 
 affinity: {}
+
+podDisruptionBudget:
+  enabled: false
+  # minAvailable: 1
+  maxUnavailable: 1
+
+# Health check configuration
+healthCheck:
+  livenessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 90
+    timeoutSeconds: 5
+    failureThreshold: 2
+  readinessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Network Policy configuration
+networkPolicy:
+  enabled: false
+  # Namespace where your ingress controller is deployed
+  ingressControllerNamespace: ingress-nginx
+  ingress:
+    # Custom ingress rules (leave empty to use defaults)
+    from: []

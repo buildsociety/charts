@@ -1,0 +1,58 @@
+apiVersion: v2
+name: media-centre
+description: A complete media automation stack including VPN, downloaders, and media management tools
+type: application
+version: 0.1.0
+keywords:
+  - media
+  - automation
+  - download
+  - pvr
+  - movies
+  - tv
+  - music
+  - books
+  - vpn
+home: https://github.com/your-org/charts
+sources:
+  - https://github.com/your-org/charts
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev
+dependencies:
+  - name: gluetun
+    version: "0.1.0"
+    repository: "file://../gluetun"
+    condition: gluetun.enabled
+  - name: bazarr
+    version: "0.1.0"
+    repository: "file://../bazarr"
+    condition: bazarr.enabled
+  - name: lidarr
+    version: "0.1.0"
+    repository: "file://../lidarr"
+    condition: lidarr.enabled
+  - name: prowlarr
+    version: "0.1.0"
+    repository: "file://../prowlarr"
+    condition: prowlarr.enabled
+  - name: qbittorrent
+    version: "0.1.0"
+    repository: "file://../qbittorrent"
+    condition: qbittorrent.enabled
+  - name: radarr
+    version: "0.1.0"
+    repository: "file://../radarr"
+    condition: radarr.enabled
+  - name: readarr
+    version: "0.1.0"
+    repository: "file://../readarr"
+    condition: readarr.enabled
+  - name: sabnzbd
+    version: "0.1.0"
+    repository: "file://../sabnzbd"
+    condition: sabnzbd.enabled
+  - name: sonarr
+    version: "0.1.0"
+    repository: "file://../sonarr"
+    condition: sonarr.enabled

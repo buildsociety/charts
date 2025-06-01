@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "bazarr.fullname" . }}-test-connection"
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: wget
+      image: busybox:1.35
+      command: ['wget']
+      args: ['{{ include "bazarr.fullname" . }}:{{ .Values.bazarr.service.port }}']
+    - name: curl-test
+      image: curlimages/curl:8.0.1
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Testing Bazarr web interface..."
+          
+          # Test basic connectivity
+          curl -f --connect-timeout 30 --max-time 60 \
+            http://{{ include "bazarr.fullname" . }}:{{ .Values.bazarr.service.port }}/
+          
+          echo "✓ Bazarr web interface is accessible"
+          
+          # Test API endpoint (may return 401 without auth, but should not 500)
+          API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://{{ include "bazarr.fullname" . }}:{{ .Values.bazarr.service.port }}/api/system/status)
+          
+          if [ "$API_RESPONSE" = "401" ] || [ "$API_RESPONSE" = "200" ]; then
+            echo "✓ Bazarr API is responding (HTTP $API_RESPONSE)"
+          else
+            echo "✗ Bazarr API returned unexpected status: $API_RESPONSE"
+            exit 1
+          fi
+          
+          echo "✓ All tests passed!"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi

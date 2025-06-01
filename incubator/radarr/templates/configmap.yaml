@@ -1,0 +1,39 @@
+{{- if .Values.radarr.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "radarr.fullname" . }}-config
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: config
+data:
+  {{- range $key, $value := .Values.radarr.configMap.data }}
+  {{ $key }}: |
+    {{- $value | nindent 4 }}
+  {{- end }}
+  
+  # Default configuration
+  timezone: {{ .Values.global.timezone | quote }}
+  
+  {{- if .Values.radarr.configMap.scripts }}
+  # Custom scripts
+  {{- range $name, $script := .Values.radarr.configMap.scripts }}
+  {{ $name }}: |
+    {{- $script | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  
+  {{- if .Values.gluetun.enabled }}
+  # VPN configuration flags
+  vpn-enabled: "true"
+  {{- else }}
+  vpn-enabled: "false"
+  {{- end }}
+  
+  {{- if .Values.cloudflared.enabled }}
+  # Cloudflare tunnel configuration flags  
+  tunnel-enabled: "true"
+  {{- else }}
+  tunnel-enabled: "false"
+  {{- end }}
+{{- end }}

@@ -1,0 +1,198 @@
+# qBittorrent with Private Internet Access VPN Configuration
+# This is the RECOMMENDED configuration for production use
+# VPN provides essential privacy and security for torrent traffic
+
+qbittorrent:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+    WEBUI_PORTS: "8080"
+
+  # Resource configuration for torrent downloading
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+      
+    downloads:
+      enabled: true
+      size: 1Ti
+      storageClass: ""
+      
+    data:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+      
+    incomplete:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+
+  # Service configuration with torrent ports
+  service:
+    type: ClusterIP
+    port: 8080
+    additionalPorts:
+      bittorrent:
+        port: 6881
+        targetPort: 6881
+        protocol: TCP
+      dht:
+        port: 6881
+        targetPort: 6881
+        protocol: UDP
+
+  # qBittorrent specific settings
+  settings:
+    alternativeWebUI: false
+    anonymousMode: true
+    autoBan: true
+    maxFailedAttempts: 3
+    banDuration: 3600
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Downloads"
+    name: "qBittorrent"
+    description: "Torrent Client (VPN Protected)"
+    widget:
+      type: "qbittorrent"
+      url: "http://qbittorrent:8080"
+      username: "admin"
+      # password: "check-logs-for-generated-password"
+
+# Gluetun VPN Configuration with PIA
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+
+  # VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # IMPORTANT: Set these values in your deployment
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "UK London"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  # Resource configuration for VPN
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  # Annotations for VPN setup
+  annotations:
+    description: "qBittorrent with PIA VPN protection for secure torrenting"
+    security.policy: "vpn-required"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policy for enhanced security
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow access from *arr applications
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: radarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lidarr
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow access from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Allow HTTPS for VPN and updates
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+# Production settings
+podDisruptionBudget:
+  enabled: false  # Single instance for state consistency
+
+# Optional monitoring
+serviceMonitor:
+  enabled: false  # qBittorrent doesn't expose Prometheus metrics by default

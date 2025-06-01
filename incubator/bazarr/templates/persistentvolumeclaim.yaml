@@ -1,0 +1,99 @@
+{{- if .Values.bazarr.persistence.config.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "bazarr.fullname" . }}-config
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: config
+spec:
+  accessModes:
+    - {{ .Values.bazarr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.bazarr.persistence.config.size }}
+  {{- if .Values.bazarr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.bazarr.persistence.config.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.bazarr.persistence.tv.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "bazarr.fullname" . }}-tv
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: tv
+spec:
+  accessModes:
+    - {{ .Values.bazarr.persistence.tv.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.bazarr.persistence.tv.size }}
+  {{- if .Values.bazarr.persistence.tv.storageClass }}
+  storageClassName: {{ .Values.bazarr.persistence.tv.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.bazarr.persistence.movies.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "bazarr.fullname" . }}-movies
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: movies
+spec:
+  accessModes:
+    - {{ .Values.bazarr.persistence.movies.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.bazarr.persistence.movies.size }}
+  {{- if .Values.bazarr.persistence.movies.storageClass }}
+  storageClassName: {{ .Values.bazarr.persistence.movies.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.bazarr.persistence.anime.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "bazarr.fullname" . }}-anime
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: anime
+spec:
+  accessModes:
+    - {{ .Values.bazarr.persistence.anime.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.bazarr.persistence.anime.size }}
+  {{- if .Values.bazarr.persistence.anime.storageClass }}
+  storageClassName: {{ .Values.bazarr.persistence.anime.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "bazarr.fullname" . }}-gluetun
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: gluetun
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

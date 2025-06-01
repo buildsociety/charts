@@ -1,0 +1,34 @@
+{{- if .Values.bazarr.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "bazarr.fullname" . }}-config
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    component: config
+data:
+  {{- range $key, $value := .Values.bazarr.configMap.data }}
+  {{ $key }}: |
+    {{- $value | nindent 4 }}
+  {{- end }}
+  
+  # Default configuration
+  timezone: {{ .Values.global.timezone | quote }}
+  
+  {{- if .Values.bazarr.configMap.scripts }}
+  # Custom scripts
+  {{- range $name, $script := .Values.bazarr.configMap.scripts }}
+  {{ $name }}: |
+    {{- $script | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  
+  {{- if .Values.gluetun.enabled }}
+  # VPN configuration flags
+  vpn-enabled: "true"
+  {{- else }}
+  vpn-enabled: "false"
+  {{- end }}
+  
+
+{{- end }}

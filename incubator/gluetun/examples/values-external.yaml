@@ -1,0 +1,219 @@
+# External Access Gluetun Configuration
+# This example shows Gluetun configured with external access via NodePort
+# Provides VPN proxy services both internally to the cluster and externally
+
+gluetun:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    TZ: "Europe/London"
+    LOG_LEVEL: "info"
+    HTTPPROXY: "on"
+    HTTPPROXY_LISTENING_ADDRESS: ":8888"
+    SHADOWSOCKS: "on"
+    SHADOWSOCKS_LISTENING_ADDRESS: ":8388"
+    SOCKSPROXY: "on"
+    SOCKSPROXY_LISTENING_ADDRESS: ":1080"
+    CONTROL_SERVER_LISTENING_ADDRESS: ":8000"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+    HEALTH_TARGET_ADDRESS: "cloudflare.com:443"
+
+  # Higher resource configuration for external access
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  # Service configuration - Both internal and external
+  service:
+    # Internal service for cluster applications
+    internal:
+      enabled: true
+      type: ClusterIP
+      annotations:
+        description: "Internal VPN proxy services for cluster applications"
+      
+    # External service for external access
+    external:
+      enabled: true
+      type: NodePort
+      annotations:
+        description: "External VPN proxy services via NodePort"
+        security.policy: "external-access-enabled"
+      ports:
+        httpProxy:
+          port: 8888
+          targetPort: 8888
+          protocol: TCP
+          nodePort: 30888
+        shadowsocksTcp:
+          port: 8388
+          targetPort: 8388
+          protocol: TCP
+          nodePort: 30388
+        shadowsocksUdp:
+          port: 8388
+          targetPort: 8388
+          protocol: UDP
+          nodePort: 30389
+        socks5:
+          port: 1080
+          targetPort: 1080
+          protocol: TCP
+          nodePort: 31080
+        control:
+          port: 8000
+          targetPort: 8000
+          protocol: TCP
+          nodePort: 30800
+
+  # VPN Provider - Private Internet Access
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # IMPORTANT: Set these values for your deployment
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "UK London"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+    expressvpn:
+      enabled: false
+    surfshark:
+      enabled: false
+    custom:
+      enabled: false
+
+  # Persistence for configuration
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+
+  # Health checks enabled with more frequent monitoring
+  healthCheck:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Network"
+    name: "Gluetun VPN"
+    description: "VPN Gateway (External Access)"
+    widget:
+      type: "gluetun"
+      url: "http://gluetun:8000"
+
+  # Optional ingress for control interface
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: gluetun-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - Gluetun Control"
+    hosts:
+      - host: gluetun.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service: control
+    tls:
+      - secretName: gluetun-tls
+        hosts:
+          - gluetun.example.com
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  # Node placement for external access
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+  
+  annotations:
+    description: "VPN proxy gateway with external access via NodePort"
+    external.access: "enabled"
+    security.policy: "external-proxy"
+
+# Service account
+serviceAccount:
+  create: true
+  annotations:
+    description: "Gluetun external access service account"
+
+# Network policy for controlled external access
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow internal cluster traffic
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 1080
+        - protocol: TCP
+          port: 8388
+        - protocol: UDP
+          port: 8388
+        - protocol: TCP
+          port: 8000
+    # Allow external traffic to NodePorts (implicit via service)
+  egress:
+    # Allow VPN traffic and DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 1194
+        - protocol: UDP
+          port: 1194
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 80
+
+# Monitoring enabled for external access
+serviceMonitor:
+  enabled: true
+  labels:
+    app: gluetun
+    release: prometheus
+  annotations:
+    description: "Gluetun external access monitoring"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/v1/metrics"
+
+# HPA disabled for single instance VPN
+hpa:
+  enabled: false
+
+# PDB disabled for single instance
+podDisruptionBudget:
+  enabled: false
+
+# Global settings
+global:
+  timezone: "Europe/London"

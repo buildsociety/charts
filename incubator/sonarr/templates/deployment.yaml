@@ -1,0 +1,288 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sonarr.fullname" . }}
+  labels:
+    {{- include "sonarr.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sonarr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.sonarr.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.sonarr.homepage.enabled }}
+        homepage.group: {{ .Values.sonarr.homepage.group | quote }}
+        homepage.name: {{ .Values.sonarr.homepage.name | quote }}
+        homepage.description: {{ .Values.sonarr.homepage.description | quote }}
+        homepage.href: http://{{ include "sonarr.fullname" . }}:{{ .Values.sonarr.service.port }}
+        homepage.widget.type: {{ .Values.sonarr.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.sonarr.homepage.widget.url | quote }}
+        {{- if .Values.sonarr.homepage.widget.key }}
+        homepage.widget.key: {{ .Values.sonarr.homepage.widget.key | quote }}
+        {{- end }}
+        {{- end }}
+      labels:
+        {{- include "sonarr.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "sonarr.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+      {{- if .Values.gluetun.enabled }}
+      initContainers:
+        - name: wait-for-vpn
+          image: busybox:1.35
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for VPN connection to be established..."
+              until wget -q --timeout=5 --tries=1 --spider http://checkip.amazonaws.com/ 2>/dev/null; do
+                echo "VPN not ready, waiting 5 seconds..."
+                sleep 5
+              done
+              echo "VPN connection established, starting Sonarr..."
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+      {{- end }}
+      containers:
+        {{- if .Values.gluetun.enabled }}
+        - name: gluetun
+          image: "{{ .Values.gluetun.image.repository }}:{{ .Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.gluetun.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.gluetun.securityContext | nindent 12 }}
+          ports:
+            - name: http-proxy
+              containerPort: {{ .Values.gluetun.ports.httpProxy }}
+              protocol: TCP
+            - name: shadowsocks-tcp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksTcp }}
+              protocol: TCP
+            - name: shadowsocks-udp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksUdp }}
+              protocol: UDP
+            - name: control
+              containerPort: {{ .Values.gluetun.ports.control }}
+              protocol: TCP
+            - name: sonarr
+              containerPort: {{ .Values.sonarr.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: TZ
+              value: {{ .Values.gluetun.env.TZ | quote }}
+            - name: HTTPPROXY
+              value: {{ .Values.gluetun.env.HTTPPROXY | quote }}
+            - name: SHADOWSOCKS
+              value: {{ .Values.gluetun.env.SHADOWSOCKS | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.gluetun.env.FIREWALL_OUTBOUND_SUBNETS | quote }}
+            - name: VPN_PORT_FORWARDING
+              value: {{ .Values.gluetun.env.VPN_PORT_FORWARDING | quote }}
+            - name: UPDATER_PERIOD
+              value: {{ .Values.gluetun.env.UPDATER_PERIOD | quote }}
+            {{- if .Values.gluetun.vpn.nordvpn.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.nordvpn.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.nordvpn.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sonarr.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.mullvad.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.mullvad.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sonarr.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            - name: WIREGUARD_ADDRESSES
+              value: {{ .Values.gluetun.vpn.mullvad.addresses | quote }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.mullvad.serverCities | quote }}
+            {{- else if .Values.gluetun.vpn.pia.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.pia.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sonarr.fullname" . }}-gluetun
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sonarr.fullname" . }}-gluetun
+                  key: openvpn-password
+            - name: SERVER_REGIONS
+              value: {{ .Values.gluetun.vpn.pia.serverRegions | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.gluetun.persistence.enabled }}
+            - name: gluetun-data
+              mountPath: {{ .Values.gluetun.persistence.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.gluetun.resources | nindent 12 }}
+        {{- end }}
+        
+        - name: sonarr
+          image: "{{ .Values.sonarr.image.repository }}:{{ .Values.sonarr.image.tag }}"
+          imagePullPolicy: {{ .Values.sonarr.image.pullPolicy }}
+          {{- if not .Values.gluetun.enabled }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.sonarr.service.targetPort }}
+              protocol: TCP
+          {{- end }}
+          env:
+            - name: PUID
+              value: {{ .Values.sonarr.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.sonarr.env.PGID | quote }}
+            - name: TZ
+              value: {{ .Values.sonarr.env.TZ | quote }}
+            - name: UMASK_SET
+              value: {{ .Values.sonarr.env.UMASK_SET | quote }}
+          volumeMounts:
+            {{- if .Values.sonarr.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.sonarr.persistence.config.mountPath }}
+            {{- end }}
+            {{- if .Values.sonarr.persistence.downloads.enabled }}
+            - name: downloads
+              mountPath: {{ .Values.sonarr.persistence.downloads.mountPath }}
+            {{- end }}
+            {{- if .Values.sonarr.persistence.tv.enabled }}
+            - name: tv
+              mountPath: {{ .Values.sonarr.persistence.tv.mountPath }}
+            {{- end }}
+            {{- if .Values.sonarr.persistence.anime.enabled }}
+            - name: anime
+              mountPath: {{ .Values.sonarr.persistence.anime.mountPath }}
+            {{- end }}
+            {{- if .Values.sonarr.persistence.data.enabled }}
+            - name: data
+              mountPath: {{ .Values.sonarr.persistence.data.mountPath }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.sonarr.service.targetPort }}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.sonarr.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.sonarr.resources | nindent 12 }}
+          {{- if not .Values.gluetun.enabled }}
+          securityContext:
+            {{- toYaml .Values.sonarr.securityContext | nindent 12 }}
+          {{- end }}
+        {{- if .Values.exportarr.enabled }}
+        - name: exportarr
+          image: "{{ .Values.exportarr.image.repository }}:{{ .Values.exportarr.image.tag }}"
+          imagePullPolicy: {{ .Values.exportarr.image.pullPolicy }}
+          command: {{ .Values.exportarr.command | toJson }}
+          env:
+            - name: PORT
+              value: {{ .Values.exportarr.env.PORT | quote }}
+            - name: URL
+              value: {{ .Values.exportarr.env.URL | quote }}
+            - name: APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.exportarr.apiKeySecret.name | default (printf "%s-exportarr" (include "sonarr.fullname" .)) }}
+                  key: {{ .Values.exportarr.apiKeySecret.key }}
+            {{- if .Values.exportarr.env.ENABLE_ADDITIONAL_METRICS }}
+            - name: ENABLE_ADDITIONAL_METRICS
+              value: {{ .Values.exportarr.env.ENABLE_ADDITIONAL_METRICS | quote }}
+            {{- end }}
+            {{- if .Values.exportarr.env.ENABLE_UNKNOWN_QUEUE_ITEMS }}
+            - name: ENABLE_UNKNOWN_QUEUE_ITEMS
+              value: {{ .Values.exportarr.env.ENABLE_UNKNOWN_QUEUE_ITEMS | quote }}
+            {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.exportarr.env.PORT }}
+              protocol: TCP
+          {{- if .Values.exportarr.healthcheck.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.exportarr.healthcheck.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.exportarr.healthcheck.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.exportarr.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.exportarr.securityContext | nindent 12 }}
+        {{- end }}
+
+      volumes:
+        {{- if .Values.sonarr.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.sonarr.persistence.downloads.enabled }}
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-downloads
+        {{- end }}
+        {{- if .Values.sonarr.persistence.tv.enabled }}
+        - name: tv
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-tv
+        {{- end }}
+        {{- if .Values.sonarr.persistence.anime.enabled }}
+        - name: anime
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-anime
+        {{- end }}
+        {{- if .Values.sonarr.persistence.data.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-data
+        {{- end }}
+        {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+        - name: gluetun-data
+          persistentVolumeClaim:
+            claimName: {{ include "sonarr.fullname" . }}-gluetun
+        {{- end }}
+      
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

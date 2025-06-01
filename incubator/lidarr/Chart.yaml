@@ -1,0 +1,21 @@
+apiVersion: v2
+name: lidarr
+description: A Helm chart for Lidarr - Smart PVR for music collection automation
+type: application
+version: 0.1.0
+appVersion: "2.4.3"
+keywords:
+  - lidarr
+  - media
+  - automation
+  - pvr
+  - music
+  - audio
+home: https://lidarr.audio/
+sources:
+  - https://github.com/Lidarr/Lidarr
+  - https://github.com/linuxserver/docker-lidarr
+icon: https://raw.githubusercontent.com/Lidarr/Lidarr/develop/Logo/256.png
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

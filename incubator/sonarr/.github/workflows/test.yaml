@@ -1,0 +1,194 @@
+name: Test Sonarr Chart
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'charts/incubator/sonarr/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'charts/incubator/sonarr/**'
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.4.0
+
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
+
+      - name: Create kind cluster
+        if: steps.list-changed.outputs.changed == 'true'
+        uses: helm/kind-action@v1.7.0
+
+      - name: Run chart-testing (install)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct install --target-branch ${{ github.event.repository.default_branch }}
+
+  template-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Test default values
+        run: |
+          cd charts/incubator/sonarr
+          helm template sonarr . --debug
+
+      - name: Test with VPN enabled
+        run: |
+          cd charts/incubator/sonarr
+          helm template sonarr . -f examples/values-vpn-pia.yaml --debug
+
+      - name: Test with Cloudflare tunnel
+        run: |
+          cd charts/incubator/sonarr
+          helm template sonarr . -f examples/values-cloudflare-tunnel.yaml --debug
+
+      - name: Test complete configuration
+        run: |
+          cd charts/incubator/sonarr
+          helm template sonarr . -f examples/values-complete.yaml --debug
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Generate manifests
+        run: |
+          cd charts/incubator/sonarr
+          helm template sonarr . --output-dir ./manifests
+
+      - name: Run Checkov security scan
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: charts/incubator/sonarr/manifests
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: reports/results.sarif
+
+      - name: Upload Checkov results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: reports/results.sarif
+
+  schema-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema pyyaml
+
+      - name: Validate values schema
+        run: |
+          cd charts/incubator/sonarr
+          python -c "
+          import json
+          import yaml
+          import jsonschema
+          
+          # Load schema
+          with open('values.schema.json', 'r') as f:
+              schema = json.load(f)
+          
+          # Load and validate default values
+          with open('values.yaml', 'r') as f:
+              values = yaml.safe_load(f)
+          
+          jsonschema.validate(values, schema)
+          print('✓ Default values.yaml is valid')
+          
+          # Validate example files
+          import os
+          for example_file in os.listdir('examples'):
+              if example_file.endswith('.yaml'):
+                  with open(f'examples/{example_file}', 'r') as f:
+                      example_values = yaml.safe_load(f)
+                  jsonschema.validate(example_values, schema)
+                  print(f'✓ {example_file} is valid')
+          "
+
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check README exists
+        run: |
+          if [ ! -f "charts/incubator/sonarr/README.md" ]; then
+            echo "README.md is missing"
+            exit 1
+          fi
+
+      - name: Check Chart.yaml completeness
+        run: |
+          cd charts/incubator/sonarr
+          python -c "
+          import yaml
+          with open('Chart.yaml', 'r') as f:
+              chart = yaml.safe_load(f)
+          
+          required_fields = ['name', 'version', 'appVersion', 'description', 'type']
+          for field in required_fields:
+              if field not in chart:
+                  print(f'Missing required field: {field}')
+                  exit(1)
+          
+          print('✓ Chart.yaml has all required fields')
+          "
+
+      - name: Check values documentation
+        run: |
+          cd charts/incubator/sonarr
+          # Basic check that README contains values documentation
+          if ! grep -q "Parameter" README.md; then
+            echo "README.md should contain parameter documentation"
+            exit 1
+          fi
+          echo "✓ README contains parameter documentation"

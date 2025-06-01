@@ -1,0 +1,280 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bazarr.fullname" . }}
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "bazarr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.bazarr.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.bazarr.homepage.enabled }}
+        homepage.group: {{ .Values.bazarr.homepage.group | quote }}
+        homepage.name: {{ .Values.bazarr.homepage.name | quote }}
+        homepage.description: {{ .Values.bazarr.homepage.description | quote }}
+        homepage.href: http://{{ include "bazarr.fullname" . }}:{{ .Values.bazarr.service.port }}
+        homepage.widget.type: {{ .Values.bazarr.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.bazarr.homepage.widget.url | quote }}
+        {{- if .Values.bazarr.homepage.widget.key }}
+        homepage.widget.key: {{ .Values.bazarr.homepage.widget.key | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bazarr.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "bazarr.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+      {{- if .Values.gluetun.enabled }}
+      initContainers:
+        - name: wait-for-vpn
+          image: busybox:1.35
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for VPN connection to be established..."
+              until wget -q --timeout=5 --tries=1 --spider http://checkip.amazonaws.com/ 2>/dev/null; do
+                echo "VPN not ready, waiting 5 seconds..."
+                sleep 5
+              done
+              echo "VPN connection established, starting Bazarr..."
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+      {{- end }}
+      containers:
+        {{- if .Values.gluetun.enabled }}
+        - name: gluetun
+          image: "{{ .Values.gluetun.image.repository }}:{{ .Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.gluetun.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.gluetun.securityContext | nindent 12 }}
+          ports:
+            - name: http-proxy
+              containerPort: {{ .Values.gluetun.ports.httpProxy }}
+              protocol: TCP
+            - name: shadowsocks-tcp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksTcp }}
+              protocol: TCP
+            - name: shadowsocks-udp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksUdp }}
+              protocol: UDP
+            - name: control
+              containerPort: {{ .Values.gluetun.ports.control }}
+              protocol: TCP
+            - name: bazarr
+              containerPort: {{ .Values.bazarr.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: TZ
+              value: {{ .Values.gluetun.env.TZ | quote }}
+            - name: HTTPPROXY
+              value: {{ .Values.gluetun.env.HTTPPROXY | quote }}
+            - name: SHADOWSOCKS
+              value: {{ .Values.gluetun.env.SHADOWSOCKS | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.gluetun.env.FIREWALL_OUTBOUND_SUBNETS | quote }}
+            - name: VPN_PORT_FORWARDING
+              value: {{ .Values.gluetun.env.VPN_PORT_FORWARDING | quote }}
+            - name: UPDATER_PERIOD
+              value: {{ .Values.gluetun.env.UPDATER_PERIOD | quote }}
+            {{- if .Values.gluetun.vpn.nordvpn.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.nordvpn.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.nordvpn.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bazarr.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.mullvad.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.mullvad.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bazarr.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            - name: WIREGUARD_ADDRESSES
+              value: {{ .Values.gluetun.vpn.mullvad.addresses | quote }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.mullvad.serverCities | quote }}
+            {{- else if .Values.gluetun.vpn.pia.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.pia.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bazarr.fullname" . }}-gluetun
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bazarr.fullname" . }}-gluetun
+                  key: openvpn-password
+            - name: SERVER_REGIONS
+              value: {{ .Values.gluetun.vpn.pia.serverRegions | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.gluetun.persistence.enabled }}
+            - name: gluetun-data
+              mountPath: {{ .Values.gluetun.persistence.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.gluetun.resources | nindent 12 }}
+        {{- end }}
+        
+        - name: bazarr
+          image: "{{ .Values.bazarr.image.repository }}:{{ .Values.bazarr.image.tag }}"
+          imagePullPolicy: {{ .Values.bazarr.image.pullPolicy }}
+          {{- if not .Values.gluetun.enabled }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.bazarr.service.targetPort }}
+              protocol: TCP
+          {{- end }}
+          env:
+            - name: PUID
+              value: {{ .Values.bazarr.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.bazarr.env.PGID | quote }}
+            - name: TZ
+              value: {{ .Values.bazarr.env.TZ | quote }}
+            - name: UMASK_SET
+              value: {{ .Values.bazarr.env.UMASK_SET | quote }}
+          volumeMounts:
+            {{- if .Values.bazarr.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.bazarr.persistence.config.mountPath }}
+            {{- end }}
+            {{- if .Values.bazarr.persistence.tv.enabled }}
+            - name: tv
+              mountPath: {{ .Values.bazarr.persistence.tv.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.bazarr.persistence.movies.enabled }}
+            - name: movies
+              mountPath: {{ .Values.bazarr.persistence.movies.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.bazarr.persistence.anime.enabled }}
+            - name: anime
+              mountPath: {{ .Values.bazarr.persistence.anime.mountPath }}
+              readOnly: true
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.bazarr.service.targetPort }}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.bazarr.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.bazarr.resources | nindent 12 }}
+          {{- if not .Values.gluetun.enabled }}
+          securityContext:
+            {{- toYaml .Values.bazarr.securityContext | nindent 12 }}
+          {{- end }}
+        {{- if .Values.exportarr.enabled }}
+        - name: exportarr
+          image: "{{ .Values.exportarr.image.repository }}:{{ .Values.exportarr.image.tag }}"
+          imagePullPolicy: {{ .Values.exportarr.image.pullPolicy }}
+          command: {{ .Values.exportarr.command | toJson }}
+          env:
+            - name: PORT
+              value: {{ .Values.exportarr.env.PORT | quote }}
+            - name: URL
+              value: {{ .Values.exportarr.env.URL | quote }}
+            - name: APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.exportarr.apiKeySecret.name | default (printf "%s-exportarr" (include "bazarr.fullname" .)) }}
+                  key: {{ .Values.exportarr.apiKeySecret.key }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.exportarr.env.PORT }}
+              protocol: TCP
+          {{- if .Values.exportarr.healthcheck.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.exportarr.healthcheck.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.exportarr.healthcheck.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.exportarr.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.exportarr.securityContext | nindent 12 }}
+        {{- end }}
+
+      volumes:
+        {{- if .Values.bazarr.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "bazarr.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.bazarr.persistence.tv.enabled }}
+        - name: tv
+          persistentVolumeClaim:
+            claimName: {{ include "bazarr.fullname" . }}-tv
+        {{- end }}
+        {{- if .Values.bazarr.persistence.movies.enabled }}
+        - name: movies
+          persistentVolumeClaim:
+            claimName: {{ include "bazarr.fullname" . }}-movies
+        {{- end }}
+        {{- if .Values.bazarr.persistence.anime.enabled }}
+        - name: anime
+          persistentVolumeClaim:
+            claimName: {{ include "bazarr.fullname" . }}-anime
+        {{- end }}
+        {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+        - name: gluetun-data
+          persistentVolumeClaim:
+            claimName: {{ include "bazarr.fullname" . }}-gluetun
+        {{- end }}
+      
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,89 @@
+{{- if .Values.qbittorrent.persistence.config.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}-config
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.config.size }}
+  {{- if .Values.qbittorrent.persistence.config.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.config.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.qbittorrent.persistence.downloads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}-downloads
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.downloads.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.downloads.size }}
+  {{- if .Values.qbittorrent.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.downloads.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.qbittorrent.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}-data
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.data.size }}
+  {{- if .Values.qbittorrent.persistence.data.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.data.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.qbittorrent.persistence.incomplete.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}-incomplete
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.incomplete.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.incomplete.size }}
+  {{- if .Values.qbittorrent.persistence.incomplete.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.incomplete.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}-gluetun
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

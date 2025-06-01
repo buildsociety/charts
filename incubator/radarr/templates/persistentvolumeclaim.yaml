@@ -1,0 +1,99 @@
+{{- if .Values.radarr.persistence.config.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.fullname" . }}-config
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: config
+spec:
+  accessModes:
+    - {{ .Values.radarr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.radarr.persistence.config.size }}
+  {{- if .Values.radarr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.radarr.persistence.config.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.radarr.persistence.downloads.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.fullname" . }}-downloads
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: downloads
+spec:
+  accessModes:
+    - {{ .Values.radarr.persistence.downloads.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.radarr.persistence.downloads.size }}
+  {{- if .Values.radarr.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.radarr.persistence.downloads.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.radarr.persistence.movies.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.fullname" . }}-movies
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: movies
+spec:
+  accessModes:
+    - {{ .Values.radarr.persistence.movies.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.radarr.persistence.movies.size }}
+  {{- if .Values.radarr.persistence.movies.storageClass }}
+  storageClassName: {{ .Values.radarr.persistence.movies.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.radarr.persistence.data.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.fullname" . }}-data
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: data
+spec:
+  accessModes:
+    - {{ .Values.radarr.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.radarr.persistence.data.size }}
+  {{- if .Values.radarr.persistence.data.storageClass }}
+  storageClassName: {{ .Values.radarr.persistence.data.storageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "radarr.fullname" . }}-gluetun
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+    component: gluetun
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

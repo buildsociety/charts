@@ -1,0 +1,39 @@
+{{- if and .Values.exportarr.enabled .Values.exportarr.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "bazarr.fullname" . }}-exportarr
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+    {{- with .Values.exportarr.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.exportarr.serviceMonitor.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.exportarr.serviceMonitor.namespaceSelector }}
+  namespace: {{ . }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "bazarr.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: {{ .Values.exportarr.service.name }}
+      interval: {{ .Values.exportarr.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.exportarr.serviceMonitor.scrapeTimeout }}
+      path: {{ .Values.exportarr.serviceMonitor.path }}
+      {{- with .Values.exportarr.serviceMonitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.exportarr.serviceMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- with .Values.exportarr.serviceMonitor.targetLabels }}
+  targetLabels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,263 @@
+# Production Prowlarr Configuration
+# This example shows a production-ready Prowlarr setup with VPN, monitoring, and security
+
+prowlarr:
+  enabled: true
+  
+  # Production image configuration
+  image:
+    repository: lscr.io/linuxserver/prowlarr
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+
+  # Production resource configuration
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # Production persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+      
+    data:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9696
+    targetPort: 9696
+
+  # Production ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: prowlarr-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - Prowlarr"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: prowlarr.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: prowlarr-tls
+        hosts:
+          - prowlarr.example.com
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Prowlarr"
+    description: "Indexer Manager"
+    widget:
+      type: "prowlarr"
+      url: "https://prowlarr.example.com"
+      key: "your-production-api-key"
+
+# Gluetun VPN Configuration for Production
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsNonRoot: false
+
+  # VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      username: "your-production-pia-username"
+      password: "your-production-pia-password"
+      serverRegions: "UK London"
+    
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: "fast-ssd"
+    accessMode: ReadWriteOnce
+
+  # VPN resource configuration
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Pod-level configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+  
+  # Production node placement
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+  
+  # Tolerations for dedicated media nodes
+  tolerations:
+    - key: "media-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
+  # Anti-affinity to avoid single points of failure
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - prowlarr
+            topologyKey: kubernetes.io/hostname
+
+  # Production annotations
+  annotations:
+    backup.velero.io/backup-volumes: "config"
+    backup.velero.io/backup-volumes-excludes: "data"
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    description: "Prowlarr production service account"
+
+# Network policies for security
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 9696
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9696
+    # Allow access from other *arr applications
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: media
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: radarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lidarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: readarr
+      ports:
+        - protocol: TCP
+          port: 9696
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+# Pod Disruption Budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service Monitor for Prometheus monitoring
+serviceMonitor:
+  enabled: true
+  labels:
+    app: prowlarr
+    release: prometheus
+  annotations:
+    description: "Prowlarr metrics collection"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/metrics"
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+
+# Global settings
+global:
+  timezone: "Europe/London"

@@ -1,0 +1,63 @@
+# Example values for basic Tautulli setup
+# Copy this file and update the Plex server details before use
+
+global:
+  timezone: "Europe/London"
+
+tautulli:
+  enabled: true
+  
+  env:
+    TZ: "Europe/London"
+    PUID: 1000
+    PGID: 1000
+
+  service:
+    type: ClusterIP
+    port: 8181
+
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: ""
+    logs:
+      enabled: false
+
+  ingress:
+    enabled: false
+    
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Tautulli"
+    description: "Plex Analytics"
+    widget:
+      type: "tautulli"
+      url: "http://tautulli:8181"
+      key: ""  # Set your API key here after initial setup
+
+  # Plex server configuration
+  plex:
+    url: "http://plex:32400"  # Update with your Plex server URL
+    token: ""  # Set your Plex token here (optional, can be configured in UI)
+    ssl_verify: true
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Security and networking
+serviceAccount:
+  create: true
+
+networkPolicy:
+  enabled: false
+
+pod:
+  securityContext:
+    fsGroup: 1000

@@ -1,0 +1,17 @@
+{{- if .Values.sabnzbd.persistence.incomplete.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sabnzbd.fullname" . }}-incomplete
+  labels:
+    {{- include "sabnzbd.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.sabnzbd.persistence.incomplete.accessMode }}
+  {{- if .Values.sabnzbd.persistence.incomplete.storageClass }}
+  storageClassName: {{ .Values.sabnzbd.persistence.incomplete.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.sabnzbd.persistence.incomplete.size }}
+{{- end }}

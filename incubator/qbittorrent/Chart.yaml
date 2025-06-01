@@ -1,0 +1,21 @@
+apiVersion: v2
+name: qbittorrent
+description: A Helm chart for qBittorrent - BitTorrent client with web UI
+type: application
+version: 0.1.0
+appVersion: "4.6.4"
+keywords:
+  - qbittorrent
+  - torrent
+  - bittorrent
+  - client
+  - download
+  - p2p
+home: https://www.qbittorrent.org/
+sources:
+  - https://github.com/qbittorrent/qBittorrent
+  - https://github.com/linuxserver/docker-qbittorrent
+icon: https://raw.githubusercontent.com/qbittorrent/qBittorrent/master/src/icons/qbittorrent-tray.svg
+maintainers:
+  - name: Michael Leer
+    email: michael@leer.dev

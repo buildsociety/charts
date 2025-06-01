@@ -1,0 +1,305 @@
+# Production Gluetun Configuration
+# This example shows a production-ready Gluetun setup with LoadBalancer, monitoring, and security
+
+gluetun:
+  enabled: true
+  
+  # Production image configuration
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Production environment configuration
+  env:
+    TZ: "Europe/London"
+    LOG_LEVEL: "info"
+    HTTPPROXY: "on"
+    HTTPPROXY_LISTENING_ADDRESS: ":8888"
+    SHADOWSOCKS: "on"
+    SHADOWSOCKS_LISTENING_ADDRESS: ":8388"
+    SOCKSPROXY: "on"
+    SOCKSPROXY_LISTENING_ADDRESS: ":1080"
+    CONTROL_SERVER_LISTENING_ADDRESS: ":8000"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "12h"
+    HEALTH_TARGET_ADDRESS: "cloudflare.com:443"
+    HEALTH_SUCCESS_WAIT_DURATION: "3s"
+
+  # Production resource configuration
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Service configuration - Production with LoadBalancer
+  service:
+    # Internal service for cluster applications
+    internal:
+      enabled: true
+      type: ClusterIP
+      annotations:
+        description: "Production internal VPN proxy services"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/v1/metrics"
+      
+    # External service with LoadBalancer
+    external:
+      enabled: true
+      type: LoadBalancer
+      annotations:
+        description: "Production external VPN proxy services via LoadBalancer"
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+        external-dns.alpha.kubernetes.io/hostname: "vpn.example.com"
+      loadBalancerSourceRanges:
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"
+        - "203.0.113.0/24"  # Your office IP range
+      ports:
+        httpProxy:
+          port: 8888
+          targetPort: 8888
+          protocol: TCP
+        shadowsocksTcp:
+          port: 8388
+          targetPort: 8388
+          protocol: TCP
+        shadowsocksUdp:
+          port: 8388
+          targetPort: 8388
+          protocol: UDP
+        socks5:
+          port: 1080
+          targetPort: 1080
+          protocol: TCP
+        control:
+          port: 8000
+          targetPort: 8000
+          protocol: TCP
+
+  # VPN Provider - Production Private Internet Access
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # IMPORTANT: Set these values for your production deployment
+      username: "your-production-pia-username"
+      password: "your-production-pia-password"
+      serverRegions: "UK London,US East"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+    expressvpn:
+      enabled: false
+    surfshark:
+      enabled: false
+    custom:
+      enabled: false
+
+  # Production persistence configuration
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "fast-ssd"
+    accessMode: ReadWriteOnce
+
+  # Production health checks
+  healthCheck:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+  # Security context for production
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+    runAsNonRoot: false
+    runAsUser: 0
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Network"
+    name: "Gluetun VPN"
+    description: "Production VPN Gateway"
+    widget:
+      type: "gluetun"
+      url: "https://gluetun.example.com"
+
+  # Production ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: gluetun-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - Gluetun Control"
+      nginx.ingress.kubernetes.io/rate-limit: "30"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - host: gluetun.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service: control
+    tls:
+      - secretName: gluetun-tls
+        hosts:
+          - gluetun.example.com
+
+# Pod-level production configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+  
+  # Production node placement
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+    node-tier: "production"
+  
+  # Tolerations for dedicated VPN nodes
+  tolerations:
+    - key: "vpn-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+    - key: "production-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
+  # Anti-affinity for single instance deployment
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - gluetun
+          topologyKey: kubernetes.io/hostname
+
+  # Production annotations
+  annotations:
+    backup.velero.io/backup-volumes: "gluetun-data"
+    description: "Production VPN proxy gateway with external LoadBalancer access"
+    environment: "production"
+    security.policy: "vpn-gateway"
+    monitoring.enabled: "true"
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    description: "Gluetun production service account"
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/gluetun-role"
+
+# Production network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow internal cluster traffic from specific namespaces
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: "production"
+        - namespaceSelector:
+            matchLabels:
+              name: "media"
+        - namespaceSelector:
+            matchLabels:
+              name: "monitoring"
+      ports:
+        - protocol: TCP
+          port: 8888
+        - protocol: TCP
+          port: 1080
+        - protocol: TCP
+          port: 8388
+        - protocol: UDP
+          port: 8388
+        - protocol: TCP
+          port: 8000
+    # Allow ingress controller access
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: "ingress-nginx"
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow VPN traffic
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 1194
+        - protocol: UDP
+          port: 1194
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 8080
+
+# Production monitoring
+serviceMonitor:
+  enabled: true
+  labels:
+    app: gluetun
+    release: prometheus
+    environment: production
+  annotations:
+    description: "Gluetun production metrics collection"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/v1/metrics"
+  params:
+    format: ["prometheus"]
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+    - environment
+  metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'gluetun_.*'
+      targetLabel: __name__
+      replacement: 'vpn_${1}'
+
+# HPA disabled for VPN (single instance required)
+hpa:
+  enabled: false
+
+# PDB disabled for single instance critical service
+podDisruptionBudget:
+  enabled: false
+  # Note: VPN gateway should maintain single instance for state consistency
+
+# Global production settings
+global:
+  timezone: "Europe/London"

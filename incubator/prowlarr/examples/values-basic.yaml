@@ -1,0 +1,62 @@
+# Basic Prowlarr Configuration
+# This example shows a simple Prowlarr setup without VPN
+
+prowlarr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "America/New_York"
+    UMASK_SET: "022"
+
+  # Resource configuration for indexer management
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 5Gi
+      # storageClass: "default"
+      
+    data:
+      enabled: true
+      size: 10Gi
+      # storageClass: "default"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9696
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Prowlarr"
+    description: "Indexer Manager"
+    widget:
+      type: "prowlarr"
+      url: "http://prowlarr:9696"
+      # key: "your-api-key-here"
+
+# VPN disabled for basic setup
+gluetun:
+  enabled: false
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+
+# Service account
+serviceAccount:
+  create: true

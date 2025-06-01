@@ -1,0 +1,89 @@
+{{- if .Values.lidarr.persistence.config.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lidarr.fullname" . }}-config
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.lidarr.persistence.config.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.lidarr.persistence.config.size }}
+  {{- if .Values.lidarr.persistence.config.storageClass }}
+  storageClassName: {{ .Values.lidarr.persistence.config.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.lidarr.persistence.downloads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lidarr.fullname" . }}-downloads
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.lidarr.persistence.downloads.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.lidarr.persistence.downloads.size }}
+  {{- if .Values.lidarr.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.lidarr.persistence.downloads.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.lidarr.persistence.music.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lidarr.fullname" . }}-music
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.lidarr.persistence.music.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.lidarr.persistence.music.size }}
+  {{- if .Values.lidarr.persistence.music.storageClass }}
+  storageClassName: {{ .Values.lidarr.persistence.music.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.lidarr.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lidarr.fullname" . }}-data
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.lidarr.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.lidarr.persistence.data.size }}
+  {{- if .Values.lidarr.persistence.data.storageClass }}
+  storageClassName: {{ .Values.lidarr.persistence.data.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lidarr.fullname" . }}-gluetun
+  labels:
+    {{- include "lidarr.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,210 @@
+1. Get the application URLs by running these commands:
+{{- if .Values.gluetun.enabled }}
+
+  Gluetun VPN:
+{{- if contains "NodePort" .Values.gluetun.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-gluetun)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.gluetun.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-gluetun --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8000
+{{- else if contains "ClusterIP" .Values.gluetun.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=gluetun,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:$CONTAINER_PORT
+  echo "Visit http://127.0.0.1:8000 to access Gluetun"
+{{- end }}
+{{- end }}
+
+{{- if .Values.sabnzbd.enabled }}
+
+  SABnzbd:
+{{- if contains "NodePort" .Values.sabnzbd.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-sabnzbd)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.sabnzbd.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-sabnzbd --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8080
+{{- else if contains "ClusterIP" .Values.sabnzbd.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=sabnzbd,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:8080
+  echo "Visit http://127.0.0.1:8080 to access SABnzbd"
+{{- end }}
+{{- end }}
+
+{{- if .Values.qbittorrent.enabled }}
+
+  qBittorrent:
+{{- if contains "NodePort" .Values.qbittorrent.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-qbittorrent)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.qbittorrent.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-qbittorrent --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8080
+{{- else if contains "ClusterIP" .Values.qbittorrent.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=qbittorrent,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:8080
+  echo "Visit http://127.0.0.1:8080 to access qBittorrent"
+{{- end }}
+{{- end }}
+
+{{- if .Values.prowlarr.enabled }}
+
+  Prowlarr:
+{{- if contains "NodePort" .Values.prowlarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-prowlarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.prowlarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-prowlarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:9696
+{{- else if contains "ClusterIP" .Values.prowlarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=prowlarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 9696:9696
+  echo "Visit http://127.0.0.1:9696 to access Prowlarr"
+{{- end }}
+{{- end }}
+
+{{- if .Values.sonarr.enabled }}
+
+  Sonarr:
+{{- if contains "NodePort" .Values.sonarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-sonarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.sonarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-sonarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8989
+{{- else if contains "ClusterIP" .Values.sonarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=sonarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8989:8989
+  echo "Visit http://127.0.0.1:8989 to access Sonarr"
+{{- end }}
+{{- end }}
+
+{{- if .Values.radarr.enabled }}
+
+  Radarr:
+{{- if contains "NodePort" .Values.radarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-radarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.radarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-radarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:7878
+{{- else if contains "ClusterIP" .Values.radarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=radarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 7878:7878
+  echo "Visit http://127.0.0.1:7878 to access Radarr"
+{{- end }}
+{{- end }}
+
+{{- if .Values.lidarr.enabled }}
+
+  Lidarr:
+{{- if contains "NodePort" .Values.lidarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-lidarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.lidarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-lidarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8686
+{{- else if contains "ClusterIP" .Values.lidarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=lidarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8686:8686
+  echo "Visit http://127.0.0.1:8686 to access Lidarr"
+{{- end }}
+{{- end }}
+
+{{- if .Values.readarr.enabled }}
+
+  Readarr:
+{{- if contains "NodePort" .Values.readarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-readarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.readarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-readarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:8787
+{{- else if contains "ClusterIP" .Values.readarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=readarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8787:8787
+  echo "Visit http://127.0.0.1:8787 to access Readarr"
+{{- end }}
+{{- end }}
+
+{{- if .Values.bazarr.enabled }}
+
+  Bazarr:
+{{- if contains "NodePort" .Values.bazarr.service.main.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "media-centre.fullname" . }}-bazarr)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.bazarr.service.main.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "media-centre.fullname" . }}-bazarr --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:6767
+{{- else if contains "ClusterIP" .Values.bazarr.service.main.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=bazarr,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 6767:6767
+  echo "Visit http://127.0.0.1:6767 to access Bazarr"
+{{- end }}
+{{- end }}
+
+2. Configuration Steps:
+
+{{- if .Values.gluetun.enabled }}
+   a) Configure VPN credentials in Gluetun if not already set
+{{- end }}
+{{- if .Values.prowlarr.enabled }}
+   b) Set up indexers in Prowlarr first
+   c) Use Prowlarr's integration to configure other *arr applications
+{{- end }}
+   d) Configure download clients in each *arr application:
+{{- if .Values.sabnzbd.enabled }}
+      - SABnzbd: http://{{ include "media-centre.fullname" . }}-sabnzbd:8080
+{{- end }}
+{{- if .Values.qbittorrent.enabled }}
+      - qBittorrent: http://{{ include "media-centre.fullname" . }}-qbittorrent:8080
+{{- end }}
+   e) Set up media directories in each application to match your storage layout
+
+3. Storage Information:
+
+{{- if .Values.global.media.enabled }}
+   Shared media storage: {{ include "media-centre.mediaPvcName" . }} ({{ .Values.global.media.size }})
+{{- end }}
+{{- if .Values.global.downloads.enabled }}
+   Shared downloads storage: {{ include "media-centre.downloadsPvcName" . }} ({{ .Values.global.downloads.size }})
+{{- end }}
+
+4. Monitoring:
+
+{{- $monitoringEnabled := false }}
+{{- range $app := list "prowlarr" "sonarr" "radarr" "lidarr" "readarr" "bazarr" }}
+{{- if and (index $.Values $app "enabled") (index $.Values $app "exportarr" "enabled") }}
+{{- $monitoringEnabled = true }}
+{{- end }}
+{{- end }}
+{{- if $monitoringEnabled }}
+   Exportarr metrics are available at port 9707 on each application
+   Configure Prometheus to scrape these endpoints for monitoring
+{{- else }}
+   No monitoring exporters are currently enabled
+   Enable exportarr in values.yaml for Prometheus metrics
+{{- end }}
+
+5. Security Notes:
+
+{{- if .Values.gluetun.enabled }}
+   - VPN is enabled for download clients
+   - Ensure VPN credentials are properly configured
+{{- else }}
+   - WARNING: VPN is disabled - download traffic is not protected
+{{- end }}
+   - Consider implementing network policies for additional security
+   - Store sensitive configuration in Kubernetes secrets
+
+For more information, see the chart documentation and individual application guides.

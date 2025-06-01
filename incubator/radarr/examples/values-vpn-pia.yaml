@@ -1,0 +1,110 @@
+# Example values for Radarr with Private Internet Access (PIA) VPN
+# Copy this file and update the credentials before use
+
+global:
+  timezone: "Europe/London"
+
+radarr:
+  enabled: true
+  
+  env:
+    TZ: "Europe/London"
+    PUID: 1000
+    PGID: 1000
+
+  service:
+    type: ClusterIP
+    port: 7878
+
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: ""
+    downloads:
+      enabled: true
+      size: 100Gi
+      storageClass: ""
+    movies:
+      enabled: true
+      size: 2Ti
+      storageClass: ""
+    data:
+      enabled: true
+      size: 100Gi
+      storageClass: ""
+
+  ingress:
+    enabled: false
+    
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Radarr"
+    description: "Movie Manager"
+    widget:
+      type: "radarr"
+      url: "http://radarr:7878"
+      key: ""  # Set your API key here
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Enable Gluetun VPN with PIA
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: latest
+    
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      username: "YOUR_PIA_USERNAME"  # Replace with your PIA username
+      password: "YOUR_PIA_PASSWORD"  # Replace with your PIA password
+      serverRegions: "UK London"
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+
+
+# Security and networking
+serviceAccount:
+  create: true
+
+networkPolicy:
+  enabled: false
+
+pod:
+  securityContext:
+    fsGroup: 1000

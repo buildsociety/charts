@@ -1,0 +1,284 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "qbittorrent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.qbittorrent.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.qbittorrent.homepage.enabled }}
+        homepage.group: {{ .Values.qbittorrent.homepage.group | quote }}
+        homepage.name: {{ .Values.qbittorrent.homepage.name | quote }}
+        homepage.description: {{ .Values.qbittorrent.homepage.description | quote }}
+        homepage.href: http://{{ include "qbittorrent.fullname" . }}:{{ .Values.qbittorrent.service.port }}
+        homepage.widget.type: {{ .Values.qbittorrent.homepage.widget.type | quote }}
+        homepage.widget.url: {{ .Values.qbittorrent.homepage.widget.url | quote }}
+        {{- if .Values.qbittorrent.homepage.widget.username }}
+        homepage.widget.username: {{ .Values.qbittorrent.homepage.widget.username | quote }}
+        {{- end }}
+        {{- if .Values.qbittorrent.homepage.widget.password }}
+        homepage.widget.password: {{ .Values.qbittorrent.homepage.widget.password | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "qbittorrent.selectorLabels" . | nindent 8 }}
+        {{- with .Values.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "qbittorrent.serviceAccountName" . }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.pod.securityContext | nindent 8 }}
+      {{- if .Values.gluetun.enabled }}
+      initContainers:
+        - name: wait-for-vpn
+          image: busybox:1.35
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for VPN connection to be established..."
+              until wget -q --timeout=5 --tries=1 --spider http://checkip.amazonaws.com/ 2>/dev/null; do
+                echo "VPN not ready, waiting 5 seconds..."
+                sleep 5
+              done
+              echo "VPN connection established, starting qBittorrent..."
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+      {{- end }}
+      containers:
+        {{- if .Values.gluetun.enabled }}
+        - name: gluetun
+          image: "{{ .Values.gluetun.image.repository }}:{{ .Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.gluetun.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.gluetun.securityContext | nindent 12 }}
+          ports:
+            - name: http-proxy
+              containerPort: {{ .Values.gluetun.ports.httpProxy }}
+              protocol: TCP
+            - name: shadowsocks-tcp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksTcp }}
+              protocol: TCP
+            - name: shadowsocks-udp
+              containerPort: {{ .Values.gluetun.ports.shadowsocksUdp }}
+              protocol: UDP
+            - name: control
+              containerPort: {{ .Values.gluetun.ports.control }}
+              protocol: TCP
+            - name: qbittorrent
+              containerPort: {{ .Values.qbittorrent.service.targetPort }}
+              protocol: TCP
+            {{- if .Values.qbittorrent.service.additionalPorts.bittorrent }}
+            - name: bittorrent-tcp
+              containerPort: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.targetPort }}
+              protocol: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.protocol }}
+            {{- end }}
+            {{- if .Values.qbittorrent.service.additionalPorts.dht }}
+            - name: bittorrent-udp
+              containerPort: {{ .Values.qbittorrent.service.additionalPorts.dht.targetPort }}
+              protocol: {{ .Values.qbittorrent.service.additionalPorts.dht.protocol }}
+            {{- end }}
+          env:
+            - name: TZ
+              value: {{ .Values.gluetun.env.TZ | quote }}
+            - name: HTTPPROXY
+              value: {{ .Values.gluetun.env.HTTPPROXY | quote }}
+            - name: SHADOWSOCKS
+              value: {{ .Values.gluetun.env.SHADOWSOCKS | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.gluetun.env.FIREWALL_OUTBOUND_SUBNETS | quote }}
+            - name: VPN_PORT_FORWARDING
+              value: {{ .Values.gluetun.env.VPN_PORT_FORWARDING | quote }}
+            - name: UPDATER_PERIOD
+              value: {{ .Values.gluetun.env.UPDATER_PERIOD | quote }}
+            {{- if .Values.gluetun.vpn.nordvpn.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.nordvpn.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.nordvpn.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            {{- else if .Values.gluetun.vpn.mullvad.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.mullvad.serviceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.mullvad.type | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent.fullname" . }}-gluetun
+                  key: wireguard-private-key
+            - name: WIREGUARD_ADDRESSES
+              value: {{ .Values.gluetun.vpn.mullvad.addresses | quote }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.mullvad.serverCities | quote }}
+            {{- else if .Values.gluetun.vpn.pia.enabled }}
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.pia.serviceProvider | quote }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent.fullname" . }}-gluetun
+                  key: openvpn-username
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent.fullname" . }}-gluetun
+                  key: openvpn-password
+            - name: SERVER_REGIONS
+              value: {{ .Values.gluetun.vpn.pia.serverRegions | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.gluetun.persistence.enabled }}
+            - name: gluetun-data
+              mountPath: {{ .Values.gluetun.persistence.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.gluetun.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "wget -q --timeout=5 --tries=1 --spider http://localhost:{{ .Values.gluetun.ports.control }}/v1/openvpn/status || exit 1"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+        {{- end }}
+        
+        - name: qbittorrent
+          image: "{{ .Values.qbittorrent.image.repository }}:{{ .Values.qbittorrent.image.tag }}"
+          imagePullPolicy: {{ .Values.qbittorrent.image.pullPolicy }}
+          {{- if not .Values.gluetun.enabled }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.qbittorrent.service.targetPort }}
+              protocol: TCP
+            {{- if .Values.qbittorrent.service.additionalPorts.bittorrent }}
+            - name: bittorrent-tcp
+              containerPort: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.targetPort }}
+              protocol: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.protocol }}
+            {{- end }}
+            {{- if .Values.qbittorrent.service.additionalPorts.dht }}
+            - name: bittorrent-udp
+              containerPort: {{ .Values.qbittorrent.service.additionalPorts.dht.targetPort }}
+              protocol: {{ .Values.qbittorrent.service.additionalPorts.dht.protocol }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: PUID
+              value: {{ .Values.qbittorrent.env.PUID | quote }}
+            - name: PGID
+              value: {{ .Values.qbittorrent.env.PGID | quote }}
+            - name: TZ
+              value: {{ .Values.qbittorrent.env.TZ | quote }}
+            - name: UMASK_SET
+              value: {{ .Values.qbittorrent.env.UMASK_SET | quote }}
+            - name: WEBUI_PORTS
+              value: {{ .Values.qbittorrent.env.WEBUI_PORTS | quote }}
+          volumeMounts:
+            {{- if .Values.qbittorrent.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.qbittorrent.persistence.config.mountPath }}
+            {{- end }}
+            {{- if .Values.qbittorrent.persistence.downloads.enabled }}
+            - name: downloads
+              mountPath: {{ .Values.qbittorrent.persistence.downloads.mountPath }}
+            {{- end }}
+            {{- if .Values.qbittorrent.persistence.data.enabled }}
+            - name: data
+              mountPath: {{ .Values.qbittorrent.persistence.data.mountPath }}
+            {{- end }}
+            {{- if .Values.qbittorrent.persistence.incomplete.enabled }}
+            - name: incomplete
+              mountPath: {{ .Values.qbittorrent.persistence.incomplete.mountPath }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.qbittorrent.service.targetPort }}
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.qbittorrent.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.qbittorrent.resources | nindent 12 }}
+          {{- if not .Values.gluetun.enabled }}
+          securityContext:
+            {{- toYaml .Values.qbittorrent.securityContext | nindent 12 }}
+          {{- end }}
+        
+
+      
+      volumes:
+        {{- if .Values.qbittorrent.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "qbittorrent.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.qbittorrent.persistence.downloads.enabled }}
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: {{ include "qbittorrent.fullname" . }}-downloads
+        {{- end }}
+        {{- if .Values.qbittorrent.persistence.data.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "qbittorrent.fullname" . }}-data
+        {{- end }}
+        {{- if .Values.qbittorrent.persistence.incomplete.enabled }}
+        - name: incomplete
+          persistentVolumeClaim:
+            claimName: {{ include "qbittorrent.fullname" . }}-incomplete
+        {{- end }}
+        {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+        - name: gluetun-data
+          persistentVolumeClaim:
+            claimName: {{ include "qbittorrent.fullname" . }}-gluetun
+        {{- end }}
+      
+      {{- with .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

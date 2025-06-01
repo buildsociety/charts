@@ -1,0 +1,269 @@
+# Production Overseerr Configuration
+# This example shows a production-ready Overseerr setup with monitoring, security, and scaling
+
+overseerr:
+  enabled: true
+  
+  # Production image configuration
+  image:
+    repository: sctx/overseerr
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+    LOG_LEVEL: "info"
+    PORT: "5055"
+
+  # Production resource configuration
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Production persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+      accessMode: ReadWriteOnce
+      
+    logs:
+      enabled: true
+      size: 10Gi
+      storageClass: "standard"
+      accessMode: ReadWriteOnce
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5055
+    targetPort: 5055
+
+  # Production application settings
+  settings:
+    baseUrl: ""
+    trustProxy: true
+    apiRateLimit: true
+    apiRateLimitMax: 500
+    apiRateLimitWindow: 5
+
+  # Production security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  # Production ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/rate-limit: "200"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+      nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+      nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+      nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+      nginx.ingress.kubernetes.io/server-snippet: |
+        location /api/ {
+          limit_req zone=api burst=50 nodelay;
+        }
+    hosts:
+      - host: overseerr.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: overseerr-tls
+        hosts:
+          - overseerr.example.com
+
+  # Homepage integration with production URL
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Overseerr"
+    description: "Production Request Manager"
+    widget:
+      type: "overseerr"
+      url: "https://overseerr.example.com"
+      key: "your-production-api-key"
+
+# Pod-level production configuration
+pod:
+  restartPolicy: Always
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+  
+  # Production node placement
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+    node-tier: "production"
+  
+  # Tolerations for dedicated media nodes
+  tolerations:
+    - key: "media-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+    - key: "production-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
+  # Anti-affinity for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - overseerr
+            topologyKey: kubernetes.io/hostname
+
+  # Production annotations
+  annotations:
+    backup.velero.io/backup-volumes: "config"
+    backup.velero.io/backup-volumes-excludes: "logs"
+    description: "Production Overseerr request management system"
+    environment: "production"
+    monitoring.enabled: "true"
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    description: "Overseerr production service account"
+
+# Production network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    # Allow ingress controller access
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5055
+    # Allow monitoring access
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 5055
+    # Allow internal cluster access from media namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: media
+      ports:
+        - protocol: TCP
+          port: 5055
+  egress:
+    # Allow external API calls (TMDb, TheMovieDB, etc.)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Allow connection to Plex and *arr services
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: media
+      ports:
+        - protocol: TCP
+          port: 32400  # Plex
+        - protocol: TCP
+          port: 8989   # Sonarr
+        - protocol: TCP
+          port: 7878   # Radarr
+        - protocol: TCP
+          port: 8686   # Lidarr
+        - protocol: TCP
+          port: 8787   # Readarr
+    # Allow SMTP for notifications
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 587
+        - protocol: TCP
+          port: 465
+        - protocol: TCP
+          port: 25
+
+# Production monitoring
+serviceMonitor:
+  enabled: true
+  labels:
+    app: overseerr
+    release: prometheus
+    environment: production
+  annotations:
+    description: "Overseerr production metrics collection"
+  interval: "30s"
+  scrapeTimeout: "10s"
+  path: "/api/v1/status"
+  params:
+    format: ["prometheus"]
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+    - environment
+  metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'overseerr_.*'
+      targetLabel: __name__
+      replacement: 'media_request_${1}'
+
+# Production HPA for scaling
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Production PDB for availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Global production settings
+global:
+  timezone: "Europe/London"

@@ -1,0 +1,140 @@
+# Lidarr with Private Internet Access VPN Configuration
+# This example shows Lidarr configured with Gluetun VPN using PIA
+
+lidarr:
+  enabled: true
+  
+  # Environment configuration
+  env:
+    PUID: 1000
+    PGID: 1000
+    TZ: "Europe/London"
+    UMASK_SET: "022"
+
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # Persistence configuration
+  persistence:
+    config:
+      enabled: true
+      size: 2Gi
+      storageClass: ""
+      
+    downloads:
+      enabled: true
+      size: 200Gi
+      storageClass: ""
+      
+    music:
+      enabled: true
+      size: 2Ti
+      storageClass: ""
+      
+    data:
+      enabled: true
+      size: 100Gi
+      storageClass: ""
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8686
+
+  # Homepage integration
+  homepage:
+    enabled: true
+    group: "Media"
+    name: "Lidarr"
+    description: "Music Manager (VPN)"
+    widget:
+      type: "lidarr"
+      url: "http://lidarr:8686"
+      # key: "your-api-key-here"
+
+# Gluetun VPN Configuration with PIA
+gluetun:
+  enabled: true
+  
+  image:
+    repository: ghcr.io/qdm12/gluetun
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Security context for VPN
+  securityContext:
+    capabilities:
+      add:
+        - NET_ADMIN
+
+  # VPN environment variables
+  env:
+    TZ: "Europe/London"
+    HTTPPROXY: "on"
+    SHADOWSOCKS: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "192.168.0.0/16"
+    VPN_PORT_FORWARDING: "on"
+    UPDATER_PERIOD: "24h"
+
+  # Private Internet Access configuration
+  vpn:
+    pia:
+      enabled: true
+      serviceProvider: "private internet access"
+      # Set these values in your deployment:
+      username: "your-pia-username"
+      password: "your-pia-password"
+      serverRegions: "UK London"
+    
+    # Disable other providers
+    nordvpn:
+      enabled: false
+    mullvad:
+      enabled: false
+
+  # Gluetun persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  # Resource configuration for VPN
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Pod configuration
+pod:
+  securityContext:
+    fsGroup: 1000
+  
+  # Annotations for VPN setup
+  annotations:
+    description: "Lidarr with PIA VPN protection"
+
+# Service account
+serviceAccount:
+  create: true
+
+# Network policy (optional - for additional security)
+networkPolicy:
+  enabled: false
+  # Example rules - customize as needed
+  # ingress:
+  #   - from:
+  #     - namespaceSelector:
+  #         matchLabels:
+  #           name: media
+  #     ports:
+  #     - protocol: TCP
+  #       port: 8686

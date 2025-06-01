@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "qbittorrent.fullname" . }}
+  labels:
+    {{- include "qbittorrent.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.qbittorrent.service.type }}
+  ports:
+    - port: {{ .Values.qbittorrent.service.port }}
+      targetPort: {{ .Values.qbittorrent.service.targetPort }}
+      protocol: TCP
+      name: http
+    {{- if .Values.qbittorrent.service.additionalPorts.bittorrent }}
+    - port: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.port }}
+      targetPort: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.targetPort }}
+      protocol: {{ .Values.qbittorrent.service.additionalPorts.bittorrent.protocol }}
+      name: bittorrent-tcp
+    {{- end }}
+    {{- if .Values.qbittorrent.service.additionalPorts.dht }}
+    - port: {{ .Values.qbittorrent.service.additionalPorts.dht.port }}
+      targetPort: {{ .Values.qbittorrent.service.additionalPorts.dht.targetPort }}
+      protocol: {{ .Values.qbittorrent.service.additionalPorts.dht.protocol }}
+      name: bittorrent-udp
+    {{- end }}
+  selector:
+    {{- include "qbittorrent.selectorLabels" . | nindent 4 }}

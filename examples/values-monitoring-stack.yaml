@@ -1,0 +1,417 @@
+# Example Values for Complete Media Stack with Monitoring
+# This file demonstrates how to enable exportarr monitoring across all *arr applications and SABnzbd
+# 
+# Usage:
+# helm install sonarr charts/incubator/sonarr -f charts/examples/values-monitoring-stack.yaml
+# helm install radarr charts/incubator/radarr -f charts/examples/values-monitoring-stack.yaml
+# etc.
+
+# Global monitoring configuration
+global:
+  # Monitoring namespace where Prometheus is deployed
+  monitoring:
+    namespace: monitoring
+    enabled: true
+
+# Sonarr Configuration with Exportarr
+sonarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:8989"
+      ENABLE_ADDITIONAL_METRICS: "true"
+      ENABLE_UNKNOWN_QUEUE_ITEMS: "true"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      # In production, create this secret externally
+      create: true
+      value: "your-sonarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Radarr Configuration with Exportarr
+radarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["radarr"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:7878"
+      ENABLE_ADDITIONAL_METRICS: "true"
+      ENABLE_UNKNOWN_QUEUE_ITEMS: "true"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-radarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Lidarr Configuration with Exportarr
+lidarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["lidarr"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:8686"
+      ENABLE_ADDITIONAL_METRICS: "true"
+      ENABLE_UNKNOWN_QUEUE_ITEMS: "true"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-lidarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Prowlarr Configuration with Exportarr
+prowlarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["prowlarr"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:9696"
+      PROWLARR__BACKFILL: "true"
+      PROWLARR__BACKFILL_SINCE_DATE: "2024-01-01"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-prowlarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# SABnzbd Configuration with Exportarr
+sabnzbd:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["sabnzbd"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:8080"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-sabnzbd-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Bazarr Configuration with Exportarr
+bazarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["bazarr"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:6767"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-bazarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Readarr Configuration with Exportarr
+readarr:
+  exportarr:
+    enabled: true
+    
+    image:
+      repository: ghcr.io/onedr0p/exportarr
+      tag: "v2.0"
+      pullPolicy: IfNotPresent
+
+    command: ["readarr"]
+
+    env:
+      PORT: "9707"
+      URL: "http://localhost:8787"
+      ENABLE_ADDITIONAL_METRICS: "true"
+      ENABLE_UNKNOWN_QUEUE_ITEMS: "true"
+
+    service:
+      port: 9707
+      name: metrics
+
+    serviceMonitor:
+      enabled: true
+      interval: "4m"
+      scrapeTimeout: "90s"
+      labels:
+        app.kubernetes.io/component: monitoring
+        release: prometheus
+
+    apiKeySecret:
+      create: true
+      value: "your-readarr-api-key-here"
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+---
+# Prometheus Configuration for Scraping
+# Add this to your prometheus-operator values or prometheus.yml
+
+prometheus:
+  additionalScrapeConfigs: |
+    - job_name: 'sonarr-exporter'
+      static_configs:
+        - targets: ['sonarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'radarr-exporter'
+      static_configs:
+        - targets: ['radarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'lidarr-exporter'
+      static_configs:
+        - targets: ['lidarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'prowlarr-exporter'
+      static_configs:
+        - targets: ['prowlarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'sabnzbd-exporter'
+      static_configs:
+        - targets: ['sabnzbd:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'bazarr-exporter'
+      static_configs:
+        - targets: ['bazarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+      
+    - job_name: 'readarr-exporter'
+      static_configs:
+        - targets: ['readarr:9707']
+      scrape_interval: 4m
+      scrape_timeout: 90s
+      metrics_path: /metrics
+
+---
+# Grafana Dashboard Configuration
+# Import dashboard ID: 15174 (Exportarr Dashboard)
+# Or use this URL: https://grafana.com/grafana/dashboards/15174
+
+grafana:
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'media-automation'
+        orgId: 1
+        folder: 'Media Automation'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/media-automation
+
+  dashboards:
+    media-automation:
+      exportarr:
+        gnetId: 15174
+        revision: 1
+        datasource: Prometheus
+
+---
+# Production Security Notes:
+# 
+# 1. API Key Management:
+#    - Don't use apiKeySecret.create=true in production
+#    - Create secrets externally using proper secret management
+#    - Use tools like External Secrets Operator or HashiCorp Vault
+#
+# 2. Example external secret creation:
+#    kubectl create secret generic sonarr-exportarr \
+#      --from-literal=api-key=your-actual-api-key
+#
+# 3. Network Security:
+#    - Enable network policies to restrict exporter access
+#    - Use TLS for metrics endpoints in production
+#    - Consider using mTLS for Prometheus scraping
+#
+# 4. Resource Management:
+#    - Tune resource requests/limits based on your workload
+#    - Monitor exporter resource usage
+#    - Consider node affinity for exporter placement
+#
+# 5. Backup and Recovery:
+#    - Include exporter configurations in backup strategy
+#    - Document API key rotation procedures
+#    - Test metric collection failover scenarios
