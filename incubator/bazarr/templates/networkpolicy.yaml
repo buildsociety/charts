@@ -20,13 +20,15 @@ spec:
     - Egress
   ingress:
     # Allow ingress to Bazarr web interface
-    - from: []
+    - from:
+        - {}
       ports:
         - protocol: TCP
           port: {{ .Values.bazarr.service.targetPort }}
     {{- if .Values.gluetun.enabled }}
     # Allow ingress to gluetun control interface
-    - from: []
+    - from:
+        - {}
       ports:
         - protocol: TCP
           port: {{ .Values.gluetun.ports.control }}
