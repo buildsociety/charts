@@ -27,8 +27,6 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v3
-        with:
-          version: 3.13.2
 
       - name: Add Helm repos
         run: |
@@ -37,7 +35,7 @@ jobs:
           helm repo update
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@v1.8.1
         with:
           charts_dir: charts
           config: .github/workflow-extras/cr.yaml
