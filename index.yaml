@@ -1,5 +1,92 @@
 apiVersion: v1
 entries:
+  bazarr:
+  - apiVersion: v2
+    appVersion: 1.4.3
+    created: "2025-06-03T19:28:43.526921683Z"
+    description: A Helm chart for Bazarr - Subtitle manager for Sonarr and Radarr
+    digest: 112072f69c61138fb557046a8d22f3c20c25458044fdedd3cb2bcae15b1ad6ac
+    home: https://www.bazarr.media/
+    icon: https://raw.githubusercontent.com/morpheus65535/bazarr/master/frontend/public/images/logo128.png
+    keywords:
+    - bazarr
+    - subtitles
+    - media
+    - automation
+    - sonarr
+    - radarr
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: bazarr
+    sources:
+    - https://github.com/morpheus65535/bazarr
+    - https://github.com/linuxserver/docker-bazarr
+    type: application
+    urls:
+    - bazarr-0.1.0.tgz
+    version: 0.1.0
+  cloudflareddns:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2025-06-03T19:28:43.708430454Z"
+    description: A Helm chart for Cloudflare Dynamic DNS updater
+    digest: 8004b5ac49737990347e510261ed428f78fcd1b5b450a0ee74830348b2039ba0
+    home: https://github.com/hotio/cloudflareddns
+    keywords:
+    - cloudflare
+    - ddns
+    - dns
+    - dynamic-dns
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: cloudflareddns
+    sources:
+    - https://github.com/hotio/cloudflareddns
+    type: application
+    urls:
+    - cloudflareddns-0.1.0.tgz
+    version: 0.1.0
+  gluetun:
+  - apiVersion: v2
+    appVersion: v3.37.0
+    created: "2025-06-03T19:28:43.929636402Z"
+    description: A Helm chart for Gluetun - Lightweight VPN client with HTTP proxy,
+      SOCKS5 proxy, and Shadowsocks
+    digest: ea31086cbf22dc322b6a0f11cb64b73f428f2d62840cc2de675ccff582516740
+    home: https://github.com/qdm12/gluetun
+    icon: https://raw.githubusercontent.com/qdm12/gluetun/master/docs/logo.svg
+    keywords:
+    - gluetun
+    - vpn
+    - proxy
+    - wireguard
+    - openvpn
+    - shadowsocks
+    - socks5
+    - http-proxy
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: gluetun
+    sources:
+    - https://github.com/qdm12/gluetun
+    - https://github.com/qdm12/gluetun-wiki
+    type: application
+    urls:
+    - gluetun-0.1.0.tgz
+    version: 0.1.0
+  homer:
+  - apiVersion: v1
+    appVersion: 20.07.2
+    created: "2025-06-03T19:28:44.151468271Z"
+    description: A Helm chart for Homer https://github.com/bastienwirtz/homer
+    digest: fd13de38c4e6bf5abfc43387b47d9d595fed47277fefc93da3091cb713152217
+    name: homer
+    urls:
+    - homer-0.0.1.tgz
+    version: 0.0.1
   karma:
   - apiVersion: v2
     appVersion: "1.0"
@@ -24,6 +111,125 @@ entries:
     urls:
     - karma-0.0.5.tgz
     version: 0.0.5
+  lidarr:
+  - apiVersion: v2
+    appVersion: 2.4.3
+    created: "2025-06-03T19:28:44.541879716Z"
+    description: A Helm chart for Lidarr - Smart PVR for music collection automation
+    digest: 81290a462618e11f8a6b5acc0fd8e82203a8b5d46cd890c65f7d2f3293bc88eb
+    home: https://lidarr.audio/
+    icon: https://raw.githubusercontent.com/Lidarr/Lidarr/develop/Logo/256.png
+    keywords:
+    - lidarr
+    - media
+    - automation
+    - pvr
+    - music
+    - audio
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: lidarr
+    sources:
+    - https://github.com/Lidarr/Lidarr
+    - https://github.com/linuxserver/docker-lidarr
+    type: application
+    urls:
+    - lidarr-0.1.0.tgz
+    version: 0.1.0
+  media-centre:
+  - apiVersion: v2
+    created: "2025-06-03T19:28:44.807377413Z"
+    dependencies:
+    - condition: gluetun.enabled
+      name: gluetun
+      repository: file://../gluetun
+      version: 0.1.0
+    - condition: bazarr.enabled
+      name: bazarr
+      repository: file://../bazarr
+      version: 0.1.0
+    - condition: lidarr.enabled
+      name: lidarr
+      repository: file://../lidarr
+      version: 0.1.0
+    - condition: prowlarr.enabled
+      name: prowlarr
+      repository: file://../prowlarr
+      version: 0.1.0
+    - condition: qbittorrent.enabled
+      name: qbittorrent
+      repository: file://../qbittorrent
+      version: 0.1.0
+    - condition: radarr.enabled
+      name: radarr
+      repository: file://../radarr
+      version: 0.1.0
+    - condition: readarr.enabled
+      name: readarr
+      repository: file://../readarr
+      version: 0.1.0
+    - condition: sabnzbd.enabled
+      name: sabnzbd
+      repository: file://../sabnzbd
+      version: 0.1.0
+    - condition: sonarr.enabled
+      name: sonarr
+      repository: file://../sonarr
+      version: 0.1.0
+    description: A complete media automation stack including VPN, downloaders, and
+      media management tools
+    digest: 1c63b14150a8e867d3227feefce63c0c5077b8e208c8057058f0f1b11ead7873
+    home: https://github.com/trozz/charts
+    icon: https://raw.githubusercontent.com/trozz/charts/main/assets/media-centre-icon.png
+    keywords:
+    - media
+    - automation
+    - download
+    - pvr
+    - movies
+    - tv
+    - music
+    - books
+    - vpn
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: media-centre
+    sources:
+    - https://github.com/trozz/charts
+    type: application
+    urls:
+    - media-centre-0.1.0.tgz
+    version: 0.1.0
+  overseerr:
+  - apiVersion: v2
+    appVersion: 1.33.2
+    created: "2025-06-03T19:28:45.009176311Z"
+    description: A Helm chart for Overseerr - Request management and media discovery
+      tool for Plex
+    digest: 09d350d5e618cff4999e0cebbe359625d9744a1e033475c40e9304814053e3b9
+    home: https://overseerr.dev/
+    icon: https://raw.githubusercontent.com/sctx/overseerr/develop/public/logo_full.svg
+    keywords:
+    - overseerr
+    - media
+    - requests
+    - plex
+    - discovery
+    - management
+    - automation
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: overseerr
+    sources:
+    - https://github.com/sctx/overseerr
+    - https://github.com/linuxserver/docker-overseerr
+    type: application
+    urls:
+    - overseerr-0.1.0.tgz
+    version: 0.1.0
   pocket-id:
   - apiVersion: v2
     appVersion: latest
@@ -48,4 +254,190 @@ entries:
     urls:
     - pocket-id-0.0.3.tgz
     version: 0.0.3
-generated: "2025-06-01T23:03:28.664873306Z"
+  prowlarr:
+  - apiVersion: v2
+    appVersion: 1.21.2
+    created: "2025-06-03T19:28:45.473558809Z"
+    description: A Helm chart for Prowlarr - Indexer manager for *arr applications
+    digest: d2448d6c86ef45352a0e56cae4ac2664861641501ba7313f05cd94d29209b3bb
+    home: https://prowlarr.com/
+    icon: https://raw.githubusercontent.com/Prowlarr/Prowlarr/develop/Logo/256.png
+    keywords:
+    - prowlarr
+    - indexer
+    - management
+    - arr
+    - proxy
+    - automation
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: prowlarr
+    sources:
+    - https://github.com/Prowlarr/Prowlarr
+    - https://github.com/linuxserver/docker-prowlarr
+    type: application
+    urls:
+    - prowlarr-0.1.0.tgz
+    version: 0.1.0
+  qbittorrent:
+  - apiVersion: v2
+    appVersion: 4.6.4
+    created: "2025-06-03T19:28:45.694155728Z"
+    description: A Helm chart for qBittorrent - BitTorrent client with web UI
+    digest: aabf228157294665e23afb8081cd36e4bc4da7e74fbb75b889cbda61448041b3
+    home: https://www.qbittorrent.org/
+    icon: https://raw.githubusercontent.com/qbittorrent/qBittorrent/master/src/icons/qbittorrent-tray.svg
+    keywords:
+    - qbittorrent
+    - torrent
+    - bittorrent
+    - client
+    - download
+    - p2p
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: qbittorrent
+    sources:
+    - https://github.com/qbittorrent/qBittorrent
+    - https://github.com/linuxserver/docker-qbittorrent
+    type: application
+    urls:
+    - qbittorrent-0.1.0.tgz
+    version: 0.1.0
+  radarr:
+  - apiVersion: v2
+    appVersion: 5.8.3
+    created: "2025-06-03T19:28:45.887508049Z"
+    description: A Helm chart for Radarr - A fork of Sonarr to work with movies à
+      la Couchpotato
+    digest: afbf32753c907be049019ad574959569a665776d6fb56076c5071acaf075251c
+    home: https://radarr.video/
+    icon: https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png
+    keywords:
+    - radarr
+    - media
+    - automation
+    - pvr
+    - movies
+    - download
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: radarr
+    sources:
+    - https://github.com/Radarr/Radarr
+    - https://github.com/linuxserver/docker-radarr
+    type: application
+    urls:
+    - radarr-0.1.0.tgz
+    version: 0.1.0
+  readarr:
+  - apiVersion: v2
+    appVersion: 0.3.18
+    created: "2025-06-03T19:28:46.079773184Z"
+    description: A Helm chart for Readarr - Book Manager and Automation (Ebook/Audiobook)
+    digest: 42ccecf26f3fe0b8bd99021616b1bbef3af516f3252d856f652442c6226078a0
+    home: https://readarr.com/
+    icon: https://raw.githubusercontent.com/Readarr/Readarr/develop/Logo/256.png
+    keywords:
+    - readarr
+    - books
+    - ebooks
+    - audiobooks
+    - media
+    - automation
+    - calibre
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: readarr
+    sources:
+    - https://github.com/Readarr/Readarr
+    - https://github.com/linuxserver/docker-readarr
+    type: application
+    urls:
+    - readarr-0.1.0.tgz
+    version: 0.1.0
+  sabnzbd:
+  - apiVersion: v2
+    appVersion: 4.1.0
+    created: "2025-06-03T19:28:46.274161463Z"
+    description: A Helm chart for SABnzbd - The automated Usenet download tool
+    digest: e9c4364f311b446f802a94e73ae8f0879f8d7ae16066a7974c7dbe8cc59f66f4
+    home: https://sabnzbd.org/
+    icon: https://raw.githubusercontent.com/sabnzbd/sabnzbd/develop/interfaces/wizard/static/images/logo-arrow.svg
+    keywords:
+    - sabnzbd
+    - usenet
+    - newsreader
+    - automation
+    - downloads
+    - binary
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: sabnzbd
+    sources:
+    - https://github.com/sabnzbd/sabnzbd
+    - https://github.com/linuxserver/docker-sabnzbd
+    type: application
+    urls:
+    - sabnzbd-0.1.0.tgz
+    version: 0.1.0
+  sonarr:
+  - apiVersion: v2
+    appVersion: 4.0.8
+    created: "2025-06-03T19:28:46.471736287Z"
+    description: A Helm chart for Sonarr - Smart PVR for newsgroup and bittorrent
+      users
+    digest: 5b607e2799148f6f918f9fd035d6e2480bf357d1c2381291fcbe924f0c100225
+    home: https://sonarr.tv/
+    icon: https://raw.githubusercontent.com/Sonarr/Sonarr/develop/Logo/256.png
+    keywords:
+    - sonarr
+    - media
+    - automation
+    - pvr
+    - tv
+    - shows
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: sonarr
+    sources:
+    - https://github.com/Sonarr/Sonarr
+    - https://github.com/linuxserver/docker-sonarr
+    type: application
+    urls:
+    - sonarr-0.1.0.tgz
+    version: 0.1.0
+  tautulli:
+  - apiVersion: v2
+    appVersion: 2.13.4
+    created: "2025-06-03T19:28:46.70691033Z"
+    description: A Helm chart for Tautulli - A Python based monitoring and tracking
+      tool for Plex Media Server
+    digest: a5cd5760098e77a6e0f4a4dc3381773c1030dd4eba625d8dc20fb72d8c5f07e5
+    home: https://tautulli.com/
+    icon: https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png
+    keywords:
+    - tautulli
+    - plex
+    - monitoring
+    - statistics
+    - media
+    - analytics
+    maintainers:
+    - email: michael@leer.dev
+      name: Michael Leer
+    name: tautulli
+    sources:
+    - https://github.com/Tautulli/Tautulli
+    - https://github.com/linuxserver/docker-tautulli
+    type: application
+    urls:
+    - tautulli-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-06-03T19:28:46.706922713Z"
