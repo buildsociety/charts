@@ -38,12 +38,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v2.0.0
+        uses: bridgecrewio/checkov-action@v12
         with:
-          directory: stable/
+          directory: charts/
           framework: kubernetes
-          output_format: sarif
-          output_file_path: checkov-results.sarif
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
 
       - name: Upload Checkov scan results
         uses: github/codeql-action/upload-sarif@v2
